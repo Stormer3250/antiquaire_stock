@@ -46,6 +46,23 @@ et ajouter l'unité **kg** dans Configuration → Unités des non suivies.
 - Garder « Garniture & épices » (les garnitures de l'étape 4 s'y rattachent) et
   « Consommable » si vous voulez chiffrer glace/verrerie dans les fiches cocktails.
 
+## Étape 6 : importer les tarifs connus
+
+Références → « Importer un fichier » → `03-tarifs.xlsx` (31 prix d'achat HT).
+Peu importe le lieu affiché : ce fichier n'a pas de colonne de stock, il ne touche que
+les prix. Attendu : 0 créée, 31 mises à jour. Décisions du 2026-07-31 :
+
+- Prix d'achat = **droits NON inclus** (défaut de l'app inchangé) — les taxes s'ajouteront
+  au coût quand les degrés seront saisis.
+- Politique de prix inchangée (cible 80 %). Votre coefficient maison historique ×7,5
+  équivaut à une marge de 86,7 % — modifiable à tout moment dans Configuration.
+- Colonne « Taux SS » du fichier d'origine : ignorée.
+
+⚠ Doute à trancher : **Amaretto Adriatico à 86,20 € HT**. Ce prix colle mieux au format
+4,5 L (le « 450 » d'origine, corrigé en 70 cl à l'étape volumes) qu'à une bouteille
+standard. Si c'est bien une 4,5 L : remettre le volume à 450 cl sur sa fiche, sinon
+vérifier le prix.
+
 ## Corrections décidées, déjà appliquées dans les fichiers
 
 - Noms et catégories nettoyés (espaces), « Sirop orgeat » (Produit Maison) renommé
@@ -66,7 +83,9 @@ et ajouter l'unité **kg** dans Configuration → Unités des non suivies.
    Genepi Père Chartreux, Liqueur de Noix Chartreux.
 2. **Les degrés sont vides sur les 303 lignes** — indispensables pour la part fiscale
    et les prix conseillés (droits non inclus par défaut).
-3. Prix d'achat, marges par catégorie, dose par catégorie, régimes fiscaux : à définir
-   au moment du chantier tarifs.
+3. **267 références suivies restent sans prix d'achat** (le fichier d'origine n'en avait
+   que 31). Compléter au fil des factures — un fichier « Nom ; Prix d'achat HT » suffit,
+   réimportable à volonté. Marges par catégorie, dose par catégorie, régimes fiscaux :
+   à définir au moment du chantier tarifs.
 4. La colonne « Valeur du stock » du fichier d'origine est fausse (elle multiplie
    TTC × Cave × Haut) — ne pas s'y fier, l'app recalculera.
