@@ -26,7 +26,10 @@ const HEADER_GUESS = {
 };
 
 // un seul import en cours à la fois — l'état survit aux re-rendus et aux deux surfaces
-const imp = { step: 'idle', data: null, mapping: {}, lieu: null, cat: null, result: null };
+const imp = {
+  step: 'idle', data: null, mapping: {}, lieu: null, cat: null, result: null,
+  createCats: false,
+};
 
 function stockMapped() {
   return Object.values(imp.mapping).includes('stock');
@@ -65,6 +68,11 @@ function cardHtml() {
             ${S.meta.categories.filter((c) => c.nom !== 'Consommable').map((c) => `<option value="${c.id}" ${imp.cat === c.id ? 'selected' : ''}>${esc(c.nom)}</option>`).join('')}
           </select></div>
       </div>
+      <label class="row" style="gap:9px; cursor:pointer;">
+        <input type="checkbox" data-imp-createcats ${imp.createCats ? 'checked' : ''} style="accent-color:var(--ac);">
+        <span style="font-size:12px; color:var(--mut);">Créer les catégories inconnues
+          (sinon leurs lignes sont ignorées)</span>
+      </label>
       <div style="border-top:1px solid var(--line2); padding-top:12px; display:flex; flex-direction:column; gap:7px;">
         <div class="mono-label">Aperçu · ${d.row_count} ligne${d.row_count > 1 ? 's' : ''} lue${d.row_count > 1 ? 's' : ''}</div>
         ${d.preview.map((row) => `
@@ -145,6 +153,8 @@ export function mountImportCard(container, { onApplied } = {}) {
     if (lieuSel) lieuSel.addEventListener('change', () => { imp.lieu = Number(lieuSel.value); });
     const catSel = container.querySelector('[data-imp-cat]');
     if (catSel) catSel.addEventListener('change', () => { imp.cat = Number(catSel.value); });
+    const createCats = container.querySelector('[data-imp-createcats]');
+    if (createCats) createCats.addEventListener('change', () => { imp.createCats = createCats.checked; });
     const cancel = container.querySelector('[data-imp-cancel]');
     if (cancel) cancel.addEventListener('click', () => { imp.step = 'idle'; imp.data = null; repaint(); });
     const reset = container.querySelector('[data-imp-reset]');
@@ -158,6 +168,7 @@ export function mountImportCard(container, { onApplied } = {}) {
           mapping,
           location_id: imp.lieu,
           categorie_id: imp.cat,
+          create_categories: imp.createCats,
         });
         imp.result = { ...result, stock_written: stockMapped() };
         imp.step = 'done';

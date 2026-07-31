@@ -173,6 +173,51 @@ def test_template_downloads_and_roundtrips(client):
     assert r["created"] == 2 and r["errors"] == []
 
 
+def test_apply_creates_unknown_categories_when_asked(client):
+    csv_cats = "nom;categorie\nAberlour 10;Whisky\nAperol;Bitter\nCampari;Bitter\n"
+    ins = client.post(
+        "/api/import/inspect", files={"file": ("c.csv", csv_cats.encode(), "text/csv")}
+    ).json()
+    payload = {
+        "token": ins["token"],
+        "mapping": {"0": "nom", "1": "categorie"},
+        "location_id": RESERVE,
+        "categorie_id": 1,
+    }
+    # sans l'option : lignes ignorées
+    r = client.post("/api/import/apply", json=payload).json()
+    assert r["created"] == 0 and len(r["errors"]) == 3
+    # avec l'option : catégories créées une seule fois
+    ins = client.post(
+        "/api/import/inspect", files={"file": ("c.csv", csv_cats.encode(), "text/csv")}
+    ).json()
+    payload["token"] = ins["token"]
+    payload["create_categories"] = True
+    r = client.post("/api/import/apply", json=payload).json()
+    assert r["created"] == 3 and r["errors"] == []
+    noms = [c["nom"] for c in client.get("/api/state").json()["categories"]]
+    assert noms.count("Whisky") == 1 and noms.count("Bitter") == 1
+
+
+def test_apply_feeds_fournisseur_list(client):
+    csv_four = "nom;fournisseur\nGin X;Murgier\nGin Y;dugas\n"  # dugas = déjà connu (casse)
+    ins = client.post(
+        "/api/import/inspect", files={"file": ("f.csv", csv_four.encode(), "text/csv")}
+    ).json()
+    client.post(
+        "/api/import/apply",
+        json={
+            "token": ins["token"],
+            "mapping": {"0": "nom", "1": "fournisseur"},
+            "location_id": RESERVE,
+            "categorie_id": 1,
+        },
+    )
+    fours = client.get("/api/state").json()["lists"]["fournisseurs"]
+    assert "Murgier" in fours
+    assert sum(1 for f in fours if f.lower() == "dugas") == 1  # pas de doublon
+
+
 def test_apply_unknown_token(client):
     r = client.post(
         "/api/import/apply",
