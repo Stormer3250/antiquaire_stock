@@ -91,7 +91,11 @@ def test_backup_routes(client):
     assert len(listing) == 1 and listing[0]["name"].startswith("stock-")
     r = client.post(f"/api/backups/{listing[0]['name']}/restore")
     assert r.status_code == 200
+    # traversal: normalisé par le routeur avant nos routes (405 = tombe sur le statique),
+    # et l'encodé %2F est rejeté par le garde-fou dans la route (404)
     r = client.post("/api/backups/../../etc/passwd/restore")
-    assert r.status_code in (404, 422)
+    assert r.status_code in (404, 405, 422)
+    r = client.post("/api/backups/..%2F..%2Fetc%2Fpasswd/restore")
+    assert r.status_code in (404, 405, 422)
     assert client.get("/api/export").status_code == 200
     assert client.get("/api/health").json()["last_backup_at"] is not None

@@ -15,7 +15,9 @@ def data_dir() -> Path:
 
 
 def connect(db_path: str | Path) -> sqlite3.Connection:
-    conn = sqlite3.connect(db_path)
+    # check_same_thread=False : FastAPI peut créer et utiliser la connexion depuis
+    # deux threads du pool ; chaque requête a SA connexion, jamais partagée.
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
