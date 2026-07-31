@@ -61,11 +61,7 @@ export async function render(el) {
       </div>
       <div class="row" style="gap:5px;">
         ${LEVELS.map((l) => `
-        <button data-level="${l.v}" style="flex:1; padding:7px 0; font-family:var(--mono); font-size:11px; cursor:pointer;
-          ${t && t.level === l.v
-            ? 'background:var(--ac); color:#141010; border:none;'
-            : 'background:var(--panel2); color:var(--mut2); border:1px solid var(--line);'}"
-          >${l.label}</button>`).join('')}
+        <button data-level="${l.v}" class="level-btn ${t && t.level === l.v ? 'on' : ''}">${l.label}</button>`).join('')}
       </div>
       <div class="stepper" style="justify-content:flex-end;">
         <button data-minus>–</button>

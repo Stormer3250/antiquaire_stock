@@ -106,13 +106,13 @@ export async function render(el) {
       <div class="num r" style="font-size:12.5px;">${eur(i.cost)}</div>
       <button class="icon-btn danger" data-ing-del="${idx}" style="justify-self:end;" aria-label="Retirer">×</button>
     </div>`).join('')}
-    <div class="row spread" style="padding:13px 22px;">
-      <div class="row" style="gap:8px;">
+    <div class="row spread" style="padding:13px 22px; align-items:flex-start; gap:14px;">
+      <div class="row wrap" style="gap:8px; flex:1; min-width:0;">
         <button class="btn" data-ing-add style="border-style:dashed;">+ Ingrédient</button>
         <button class="btn muted" data-new-tracked style="border-style:dashed;">+ Référence suivie</button>
         <button class="btn muted" data-new-untracked style="border-style:dashed;">+ Garniture</button>
       </div>
-      <div class="row" style="gap:12px; align-items:baseline;">
+      <div class="row" style="gap:12px; align-items:baseline; flex:0 0 auto; white-space:nowrap;">
         <span style="font-size:12.5px; color:var(--mut2);">Coût matière</span>
         <span class="num accent" style="font-size:15px;">${eur(c.cost)}</span>
       </div>

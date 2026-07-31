@@ -96,7 +96,7 @@ export async function render(el, state) {
       <div class="mono-label" style="margin-bottom:11px;">Scénarios de marge</div>
       <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
         ${scenarios.map((s) => `
-        <button data-scenario="${s.m}" style="border:1px solid var(--line); background:transparent; padding:13px; display:flex; flex-direction:column; gap:6px; text-align:left; cursor:pointer;">
+        <button data-scenario="${s.m}" class="scenario-btn">
           <div class="num" style="font-size:10.5px; color:var(--mut2);">${s.k}</div>
           <div style="font-family:var(--serif); font-size:22px; color:var(--ac2);">${eur(compute(s.m).ttc)}</div>
           <div class="sub">coefficient × ${num(1 / (1 - s.m / 100), 2)}</div>
@@ -162,12 +162,12 @@ export async function render(el, state) {
       </div>
     </div>
 
-    <div class="panel" style="display:flex; flex-direction:column;">${rightPanelHtml()}</div>
+    <div class="panel" data-right style="display:flex; flex-direction:column;">${rightPanelHtml()}</div>
   </div>`;
 
   // ---------- interactions ----------
 
-  const right = el.querySelector('.panel[style*="flex-direction:column"]');
+  const right = el.querySelector('[data-right]');
 
   function refreshDerived() {
     right.querySelector('[data-marge-label]').textContent = pc(marge);

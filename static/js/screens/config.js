@@ -213,10 +213,12 @@ export async function render(el) {
     });
   });
   el.querySelector('[data-lieu-add]').addEventListener('click', async () => {
-    const nom = prompt('Nom du nouveau lieu ?');
-    if (!nom || !nom.trim()) return;
+    // même geste que les autres listes : la ligne « Nouveau lieu » se renomme sur place
+    let nom = 'Nouveau lieu';
+    let n = 2;
+    while (S.meta.locations.some((l) => l.nom === nom)) nom = `Nouveau lieu ${n++}`;
     try {
-      await apiSend('POST', '/api/locations', { nom: nom.trim() });
+      await apiSend('POST', '/api/locations', { nom });
     } catch (e) { alert(e.message); }
     await reloadMeta();
     await refresh();

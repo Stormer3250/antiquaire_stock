@@ -42,7 +42,7 @@ export async function render(el) {
         <div class="num r" style="font-size:12.5px; color:var(--mut);">${r.suivi ? eur(r.valeur) : '—'}</div>
         <div class="num r" style="font-size:12.5px; color:var(--mut);">${eur(r.cout_dose)}</div>
         <div class="num r" style="font-size:12px;">${r.suivi ? `<span class="${r.marge_reelle >= pr.min ? 'ok-text' : 'warn-text'}">${pc(r.marge_reelle)}</span>` : '—'}</div>
-        <div class="num r accent" style="font-size:13px;">${r.suivi ? eur(r.prix) + (r.override ? ' ·' : '') : '—'}</div>
+        <div class="num r accent" style="font-size:13px;" ${r.override ? 'title="Prix fixé à la main sur la fiche"' : ''}>${r.suivi ? eur(r.prix) + (r.override ? ' ·' : '') : '—'}</div>
         <div class="row" style="gap:5px; justify-self:end;">
           <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer">ÉD</button>
           <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button>

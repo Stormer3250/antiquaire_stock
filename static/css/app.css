@@ -110,7 +110,7 @@ input[type=range] { accent-color: var(--ac); }
   color: var(--mut3); text-transform: uppercase;
 }
 .serif-title { font-family: var(--serif); font-size: 17px; }
-.sub { font-size: 11.5px; color: var(--mut3); }
+.sub { font-size: 11.5px; color: var(--mut2); }
 .num { font-family: var(--mono); }
 .ok-text { color: var(--ok-ink); }
 .warn-text { color: var(--red2); }
@@ -157,7 +157,7 @@ input[type=range] { accent-color: var(--ac); }
 }
 .input:focus { border-color: var(--ac); }
 .input.num { font-family: var(--mono); font-size: 12.5px; text-align: right; }
-.input::placeholder { color: var(--mut3); }
+.input::placeholder { color: var(--mut2); }
 textarea.input { resize: vertical; color: var(--mut); }
 select.input {
   appearance: none;
@@ -230,6 +230,19 @@ select.input option { background: var(--input); color: var(--ink); }
 .bar-track { height: 5px; background: #241D19; }
 .bar-fill { height: 5px; background: var(--ac); }
 
+.scenario-btn {
+  border: 1px solid var(--line); background: transparent; padding: 13px;
+  display: flex; flex-direction: column; gap: 6px; text-align: left; cursor: pointer;
+}
+.scenario-btn:hover, .scenario-btn:focus-visible { border-color: var(--ac); }
+
+.level-btn {
+  flex: 1; padding: 7px 0; font-family: var(--mono); font-size: 11px; cursor: pointer;
+  background: var(--panel2); color: var(--mut2); border: 1px solid var(--line);
+}
+.level-btn:hover { color: var(--ink); border-color: var(--line3); }
+.level-btn.on { background: var(--ac); color: #141010; border-color: var(--ac); }
+
 /* ---------- cartes spéciales ---------- */
 
 .hero {
@@ -297,6 +310,12 @@ select.input option { background: var(--input); color: var(--ink); }
 }
 
 /* ---------- divers ---------- */
+
+@media (max-width: 1240px) {
+  .user-chip { display: none; }
+  .screen { padding: 22px 20px 40px; }
+  .topbar { padding: 14px 20px; }
+}
 
 .row { display: flex; align-items: center; gap: 10px; }
 .spread { justify-content: space-between; }

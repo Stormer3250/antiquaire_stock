@@ -65,6 +65,7 @@ export function confirmModal({ title, body, label = 'Supprimer' }) {
     scrim.querySelector('[data-no]').addEventListener('click', () => done(false));
     scrim.querySelector('[data-yes]').addEventListener('click', () => done(true));
     scrim.addEventListener('mousedown', (e) => { if (e.target === scrim) done(false); });
-    scrim.querySelector('[data-yes]').focus();
+    // le focus part sur Annuler : Entrée par réflexe ne détruit rien
+    scrim.querySelector('[data-no]').focus();
   });
 }
