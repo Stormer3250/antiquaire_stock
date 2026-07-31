@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin:0; padding:0; background:#141010; }
+  * { box-sizing:border-box; }
+  a { color:var(--ac,#79A63A); text-decoration:none; }
+  a:hover { color:var(--ac2,#9BC65C); }
+  input[type=range] { accent-color:var(--ac,#79A63A); }
+  ::selection { background:var(--ac,#79A63A); color:#141010; }
+</style>
+</helmet>
+<div style="display:flex; min-height:100vh; background:#141010; color:#F2E9DC; font-family:'IBM Plex Sans',system-ui,sans-serif; font-size:14px;">
+
+  <aside style="width:246px; flex:0 0 246px; background:#0F0C0C; border-right:1px solid #2E2521; display:flex; flex-direction:column; padding:22px 0 14px;">
+    <div style="display:flex; align-items:center; gap:12px; padding:0 20px 22px;">
+      <div style="width:42px; height:42px; border-radius:50%; border:1px solid var(--ac,#79A63A); display:grid; place-items:center; font-family:'Playfair Display',serif; font-size:20px; color:var(--ac,#79A63A);">P</div>
+      <div style="display:flex; flex-direction:column; gap:2px;">
+        <div style="font-family:'Playfair Display',serif; font-size:16px; letter-spacing:.02em;">Le Pingouin</div>
+        <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.18em; color:#8B7A69; text-transform:uppercase;">Cave &amp; comptoir</div>
+      </div>
+    </div>
+
+    <nav style="display:flex; flex-direction:column; gap:2px; padding:0 10px;">
+      <sc-for list="{{ nav }}" as="it" hint-placeholder-count="7">
+        <sc-if value="{{ it.active }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ it.go }}" style="display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:10px 12px; background:#211A16; border:none; border-left:2px solid var(--ac,#79A63A); color:#F2E9DC; font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; cursor:pointer;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--ac,#79A63A);">{{ it.num }}</span>
+            <span style="flex:1;">{{ it.label }}</span>
+          </button>
+        </sc-if>
+        <sc-if value="{{ it.idle }}">
+          <button onClick="{{ it.go }}" style="display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:10px 12px; background:transparent; border:none; border-left:2px solid transparent; color:#A2917E; font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; cursor:pointer;" style-hover="background:#191413; color:#F2E9DC;">
+            <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; color:#6D5D4E;">{{ it.num }}</span>
+            <span style="flex:1;">{{ it.label }}</span>
+          </button>
+        </sc-if>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top:auto; padding:16px 20px 0; border-top:1px solid #241D19; display:flex; flex-direction:column; gap:8px;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:#6D5D4E; text-transform:uppercase;">Objectif de marge</div>
+      <div style="font-size:13px; color:#A2917E;">Cible {{ margeCibleLabel }} · plancher {{ margeMinLabel }}</div>
+    </div>
+  </aside>
+
+  <main style="flex:1; min-width:0; display:flex; flex-direction:column;">
+    <header style="display:flex; align-items:center; gap:18px; padding:16px 30px; border-bottom:1px solid #2E2521; background:#171211;">
+      <div style="flex:1; min-width:0;">
+        <h1 style="margin:0; font-family:'Playfair Display',serif; font-weight:500; font-size:23px; letter-spacing:.01em;">{{ pageTitle }}</h1>
+        <div style="margin-top:3px; font-size:12.5px; color:#8B7A69;">{{ pageSub }}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; padding:4px; background:#100D0C; border:1px solid #2E2521;">
+        <sc-for list="{{ sites }}" as="s" hint-placeholder-count="3">
+          <sc-if value="{{ s.active }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ s.go }}" style="padding:6px 13px; background:var(--ac,#79A63A); color:#141010; border:none; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer;">{{ s.label }}</button>
+          </sc-if>
+          <sc-if value="{{ s.idle }}">
+            <button onClick="{{ s.go }}" style="padding:6px 13px; background:transparent; color:#A2917E; border:none; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer;" style-hover="color:#F2E9DC;">{{ s.label }}</button>
+          </sc-if>
+        </sc-for>
+      </div>
+      <button onClick="{{ openCreateRef }}" style="padding:8px 14px; background:transparent; border:1px solid #3A2F26; color:var(--ac,#79A63A); font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="border-color:var(--ac,#79A63A);">+ Référence</button>
+      <div style="display:flex; align-items:center; gap:10px; padding-left:16px; border-left:1px solid #2E2521;">
+        <div style="width:30px; height:30px; border-radius:50%; background:#241D18; border:1px solid #3A2F26; display:grid; place-items:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ac,#79A63A);">CB</div>
+        <div style="font-size:12.5px; color:#A2917E;">Chef barman</div>
+      </div>
+    </header>
+
+    <div style="flex:1; overflow:auto; padding:26px 30px 46px;">
+
+      <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+        <div style="display:grid; grid-template-columns:1.15fr 1fr; gap:16px; align-items:stretch;">
+          <div style="background:linear-gradient(160deg,#234A0B,#152D06); border:1px solid #2F5A16; padding:28px 30px; display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.2em; color:#A3C48A; text-transform:uppercase;">Valeur de la cave · prix d'achat HT</div>
+            <div style="font-family:'Playfair Display',serif; font-size:64px; line-height:1; letter-spacing:-.01em; margin:22px 0 10px;">{{ stockValue }}</div>
+            <div style="font-size:13.5px; color:#B4CFA0; max-width:46ch; text-wrap:pretty;">{{ doseCount }} doses de 5 cl au comptoir, sur {{ refCount }} références suivies.</div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+              <div style="background:#1C1715; border:1px solid #2E2521; padding:16px 18px; display:flex; flex-direction:column; gap:8px; justify-content:space-between;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:#8B7A69; text-transform:uppercase;">{{ k.label }}</div>
+                <div style="font-family:'Playfair Display',serif; font-size:29px; line-height:1;">{{ k.value }}</div>
+                <div style="font-size:12px; color:#8B7A69; text-wrap:pretty;">{{ k.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1.35fr 1fr; gap:16px; margin-top:16px;">
+          <div style="background:#1A1513; border:1px solid #2E2521;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 20px; border-bottom:1px solid #2E2521;">
+              <div style="font-family:'Playfair Display',serif; font-size:17px;">La cave crie famine</div>
+              <button onClick="{{ goSeuils }}" style="background:transparent; border:1px solid #3A2F26; color:var(--ac,#79A63A); padding:5px 11px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="border-color:var(--ac,#79A63A);">Régler les seuils</button>
+            </div>
+            <sc-for list="{{ alerts }}" as="a" hint-placeholder-count="4">
+              <div style="display:flex; align-items:center; gap:14px; padding:13px 20px; border-bottom:1px solid #221B18;">
+                <div style="width:5px; height:32px; background:#7A2B2B;"></div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:13.5px;">{{ a.nom }}</div>
+                  <div style="font-size:12px; color:#8B7A69;">{{ a.detail }}</div>
+                </div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--ac3,#A3C86B); text-align:right;">{{ a.reste }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#1A1513; border:1px solid #2E2521; display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 20px; border-bottom:1px solid #2E2521;">
+              <div style="font-family:'Playfair Display',serif; font-size:17px;">Marge par fiche</div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#6D5D4E;">plancher {{ margeMinLabel }}</div>
+            </div>
+            <sc-for list="{{ menuMargins }}" as="m" hint-placeholder-count="4">
+              <div style="padding:12px 20px; border-bottom:1px solid #221B18; display:flex; flex-direction:column; gap:7px;">
+                <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+                  <div style="font-size:13.5px;">{{ m.nom }}</div>
+                  <sc-if value="{{ m.ok }}" hint-placeholder-val="{{ true }}"><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:#A2917E;">{{ m.line }}</div></sc-if>
+                  <sc-if value="{{ m.under }}"><div style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:#C9736E;">{{ m.line }}</div></sc-if>
+                </div>
+                <div style="height:5px; background:#241D19;">
+                  <div style="height:5px; background:var(--ac,#79A63A); width:{{ m.pct }};"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isRefs }}">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+          <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Chercher une bouteille, une marque, un fournisseur…" style="flex:1; padding:11px 14px; background:#100D0C; border:1px solid #2E2521; color:#F2E9DC; font-family:'IBM Plex Sans',sans-serif; font-size:13.5px; outline:none;" style-focus="border-color:var(--ac,#79A63A);" />
+          <div style="width:210px;">
+            <dc-import name="Picker" value="{{ cat }}" options="{{ catOptions }}" on-select="{{ onCat }}" hint-size="100%,34px"></dc-import>
+          </div>
+        </div>
+
+        <div style="background:#1A1513; border:1px solid #2E2521;">
+          <div style="display:grid; grid-template-columns:2.2fr .9fr .6fr .7fr .9fr .9fr .7fr .9fr 66px; gap:12px; padding:11px 20px; border-bottom:1px solid #2E2521; font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.14em; color:#8B7A69; text-transform:uppercase;">
+            <div>Référence</div><div>Catégorie</div><div style="text-align:right;">Degré</div><div style="text-align:right;">Stock</div><div style="text-align:right;">Valeur HT</div><div style="text-align:right;">Coût unitaire</div><div style="text-align:right;">Marge</div><div style="text-align:right;">Prix conseillé</div><div></div>
+          </div>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+            <div style="display:grid; grid-template-columns:2.2fr .9fr .6fr .7fr .9fr .9fr .7fr .9fr 66px; gap:12px; align-items:center; padding:13px 20px; border-bottom:1px solid #221B18;" style-hover="background:#201A17;">
+              <div onClick="{{ r.open }}" style="display:flex; align-items:center; gap:11px; min-width:0; cursor:pointer;">
+                <sc-if value="{{ r.low }}"><div style="width:5px; height:26px; background:#7A2B2B;"></div></sc-if>
+                <sc-if value="{{ r.fine }}"><div style="width:5px; height:26px; background:#2C5A0A;"></div></sc-if>
+                <sc-if value="{{ r.untracked }}"><div style="width:5px; height:26px; background:#3A2F26;"></div></sc-if>
+                <div style="min-width:0;">
+                  <div style="font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.nom }}</div>
+                  <div style="font-size:11.5px; color:#8B7A69;">{{ r.sub }}</div>
+                </div>
+              </div>
+              <div style="font-size:12.5px; color:#A2917E;">{{ r.cat }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; color:#A2917E; text-align:right;">{{ r.abv }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right;">{{ r.stock }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right; color:#A2917E;">{{ r.valeur }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right; color:#A2917E;">{{ r.coutDose }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; text-align:right; color:#8FB273;">{{ r.marge }}</div>
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:right; color:var(--ac2,#9BC65C);">{{ r.prix }}</div>
+              <div style="display:flex; gap:5px; justify-self:end;">
+                <button onClick="{{ r.edit }}" style="width:26px; height:26px; background:#211A16; border:1px solid #2E2521; color:#A2917E; font-family:'IBM Plex Mono',monospace; font-size:10px; cursor:pointer;" style-hover="color:var(--ac,#79A63A); border-color:var(--ac,#79A63A);">ÉD</button>
+                <button onClick="{{ r.remove }}" style="width:26px; height:26px; background:#211A16; border:1px solid #2E2521; color:#6D5D4E; font-size:12px; cursor:pointer;" style-hover="color:#C9736E; border-color:#7A2B2B;">×</button>
+              </div>
+            </div>
+          </sc-for>
+          <div style="padding:13px 20px; display:flex; justify-content:space-between; font-size:12px; color:#6D5D4E;">
+            <span>{{ rowsCount }}</span><span>Prix conseillés TTC à marge cible de {{ margeCibleLabel }}</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isProduct }}">
+        <div style="display:grid; grid-template-columns:1fr 1.15fr; gap:18px;">
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div style="background:#1A1513; border:1px solid #2E2521; padding:22px;">
+              <div style="display:flex; gap:18px;">
+                <div style="width:78px; height:150px; flex:0 0 78px; border:1px solid #2E2521; background:repeating-linear-gradient(135deg,#1F1917 0 7px,#241D19 7px 14px); display:grid; place-items:center; text-align:center;">
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:8.5px; color:#6D5D4E; letter-spacing:.06em;">photo<br />bouteille</span>
+                </div>
+                <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:12px;">
+                  <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                    <div style="min-width:0;">
+                      <div style="font-family:'Playfair Display',serif; font-size:25px; line-height:1.15;">{{ p.nom }}</div>
+                      <div style="margin-top:4px; font-size:13px; color:#8B7A69;">{{ p.sub }}</div>
+                    </div>
+                    <div style="display:flex; gap:7px; flex:0 0 auto;">
+                      <button onClick="{{ editProduct }}" style="padding:6px 11px; background:transparent; border:1px solid #3A2F26; color:var(--ac,#79A63A); font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="border-color:var(--ac,#79A63A);">Éditer</button>
+                      <button onClick="{{ removeProduct }}" style="padding:6px 11px; background:transparent; border:1px solid #3A2F26; color:#8B7A69; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="color:#C9736E; border-color:#7A2B2B;">Supprimer</button>
+                    </div>
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px 16px;">
+                    <sc-for list="{{ p.specs }}" as="s" hint-placeholder-count="6">
+                      <div style="display:flex; flex-direction:column; gap:3px;">
+                        <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.14em; color:#6D5D4E; text-transform:uppercase;">{{ s.k }}</div>
+                        <div style="font-size:13px; color:#F2E9DC;">{{ s.v }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="background:#1A1513; border:1px solid #2E2521;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 20px; border-bottom:1px solid #2E2521;">
+                <div style="font-family:'Playfair Display',serif; font-size:17px;">Part fiscale de la dose</div>
+                <button onClick="{{ goBareme }}" style="background:transparent; border:1px solid #3A2F26; color:var(--ac,#79A63A); padding:5px 11px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="border-color:var(--ac,#79A63A);">Barème</button>
+              </div>
+              <sc-for list="{{ p.fiscal }}" as="f" hint-placeholder-count="5">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 20px; border-bottom:1px solid #221B18;">
+                  <div style="min-width:0;">
+                    <div style="font-size:13px;">{{ f.k }}</div>
+                    <div style="font-size:11.5px; color:#6D5D4E;">{{ f.n }}</div>
+                  </div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--ac3,#A3C86B); white-space:nowrap;">{{ f.v }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#1A1513; border:1px solid #2E2521; display:flex; flex-direction:column;">
+            <div style="padding:15px 20px; border-bottom:1px solid #2E2521; display:flex; align-items:center; justify-content:space-between;">
+              <div style="font-family:'Playfair Display',serif; font-size:17px;">Prix conseillé · dose de {{ p.doseCl }} cl</div>
+              <button onClick="{{ back }}" style="background:transparent; border:1px solid #3A2F26; color:#8B7A69; padding:5px 11px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="color:#F2E9DC;">Retour</button>
+            </div>
+
+            <div style="padding:20px; display:flex; flex-direction:column; gap:13px; border-bottom:1px solid #2E2521;">
+              <div style="display:flex; align-items:baseline; justify-content:space-between;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.16em; color:#8B7A69; text-transform:uppercase;">Marge brute visée</div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:15px; color:var(--ac,#79A63A);">{{ margeLabel }}</div>
+              </div>
+              <input type="range" min="60" max="92" step="1" value="{{ marge }}" onChange="{{ onMarge }}" style="width:100%;" />
+              <div style="display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#6D5D4E;">
+                <span>plancher maison {{ margeMinLabel }}</span><span>coefficient équivalent {{ p.coeffEq }}</span>
+              </div>
+            </div>
+
+            <sc-for list="{{ p.waterfall }}" as="w" hint-placeholder-count="4">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; padding:13px 20px; border-bottom:1px solid #221B18;">
+                <div style="min-width:0;">
+                  <div style="font-size:13.5px;">{{ w.k }}</div>
+                  <div style="font-size:11.5px; color:#6D5D4E;">{{ w.n }}</div>
+                </div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#A2917E; white-space:nowrap;">{{ w.v }}</div>
+              </div>
+            </sc-for>
+
+            <sc-if value="{{ p.ok }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:20px; background:#1E2A12; border-bottom:1px solid #2E2521; display:flex; align-items:flex-end; justify-content:space-between; gap:18px;">
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.16em; color:#A9C98F; text-transform:uppercase;">Prix conseillé TTC arrondi</div>
+                  <div style="font-size:12.5px; color:#9BB287;">{{ p.marginNote }}</div>
+                </div>
+                <div style="font-family:'Playfair Display',serif; font-size:44px; line-height:1;">{{ p.prixTTC }}</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ p.under }}">
+              <div style="padding:20px; background:#2A1B1A; border-bottom:1px solid #4A2A28; display:flex; align-items:flex-end; justify-content:space-between; gap:18px;">
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.16em; color:#D9948E; text-transform:uppercase;">Sous le plancher de {{ margeMinLabel }}</div>
+                  <div style="font-size:12.5px; color:#C9A29E;">{{ p.marginNote }}</div>
+                </div>
+                <div style="font-family:'Playfair Display',serif; font-size:44px; line-height:1;">{{ p.prixTTC }}</div>
+              </div>
+            </sc-if>
+
+            <div style="padding:16px 20px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:#6D5D4E; text-transform:uppercase; margin-bottom:11px;">Scénarios de marge</div>
+              <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+                <sc-for list="{{ p.scenarios }}" as="s" hint-placeholder-count="3">
+                  <button onClick="{{ s.go }}" style="border:1px solid #2E2521; background:transparent; padding:13px; display:flex; flex-direction:column; gap:6px; text-align:left; cursor:pointer;" style-hover="border-color:var(--ac,#79A63A);">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#8B7A69;">{{ s.k }}</div>
+                    <div style="font-family:'Playfair Display',serif; font-size:22px; color:var(--ac2,#9BC65C);">{{ s.v }}</div>
+                    <div style="font-size:11.5px; color:#6D5D4E;">{{ s.n }}</div>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isInv }}">
+        <div style="display:grid; grid-template-columns:1fr 300px; gap:18px; align-items:start;">
+          <div style="background:#1A1513; border:1px solid #2E2521;">
+            <div style="display:grid; grid-template-columns:2fr 1.6fr .8fr .8fr; gap:12px; padding:11px 20px; border-bottom:1px solid #2E2521; font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.14em; color:#8B7A69; text-transform:uppercase;">
+              <div>Référence</div><div>Niveau de la bouteille ouverte</div><div style="text-align:right;">Pleines</div><div style="text-align:right;">Compté</div>
+            </div>
+            <sc-for list="{{ invRows }}" as="r" hint-placeholder-count="8">
+              <div style="display:grid; grid-template-columns:2fr 1.6fr .8fr .8fr; gap:12px; align-items:center; padding:12px 20px; border-bottom:1px solid #221B18;">
+                <div style="min-width:0;">
+                  <div style="font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.nom }}</div>
+                  <div style="font-size:11.5px; color:#6D5D4E;">{{ r.sub }}</div>
+                </div>
+                <div style="display:flex; gap:5px;">
+                  <sc-for list="{{ r.levels }}" as="l" hint-placeholder-count="5">
+                    <sc-if value="{{ l.on }}">
+                      <button onClick="{{ l.go }}" style="flex:1; padding:7px 0; background:var(--ac,#79A63A); color:#141010; border:none; font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer;">{{ l.label }}</button>
+                    </sc-if>
+                    <sc-if value="{{ l.off }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ l.go }}" style="flex:1; padding:7px 0; background:#211A16; color:#8B7A69; border:1px solid #2E2521; font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer;" style-hover="color:#F2E9DC; border-color:#3A2F26;">{{ l.label }}</button>
+                    </sc-if>
+                  </sc-for>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px;">
+                  <button onClick="{{ r.minus }}" style="width:26px; height:26px; background:#211A16; border:1px solid #2E2521; color:#A2917E; font-size:14px; cursor:pointer;" style-hover="color:#F2E9DC;">–</button>
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:13.5px; min-width:20px; text-align:center;">{{ r.full }}</span>
+                  <button onClick="{{ r.plus }}" style="width:26px; height:26px; background:#211A16; border:1px solid #2E2521; color:#A2917E; font-size:14px; cursor:pointer;" style-hover="color:#F2E9DC;">+</button>
+                </div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right; color:var(--ac2,#9BC65C);">{{ r.counted }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#1E2A12; border:1px solid #2F4A1C; padding:20px; display:flex; flex-direction:column; gap:14px; position:sticky; top:0;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.16em; color:#A9C98F; text-transform:uppercase;">Comptage en cours</div>
+            <div style="font-family:'Playfair Display',serif; font-size:36px; line-height:1;">{{ invValue }}</div>
+            <div style="font-size:12.5px; color:#9BB287;">{{ invProgress }}</div>
+            <button onClick="{{ closeInventory }}" style="padding:11px; background:var(--ac,#79A63A); border:none; color:#141010; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer;" style-hover="background:var(--ac2,#9BC65C);">Clôturer l'inventaire</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isCocktail }}">
+        <div style="display:grid; grid-template-columns:266px 1fr; gap:18px; align-items:start;">
+          <div style="background:#1A1513; border:1px solid #2E2521;">
+            <div style="padding:14px 18px; border-bottom:1px solid #2E2521; font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:#8B7A69; text-transform:uppercase;">Carte · {{ cocktailCount }}</div>
+            <sc-for list="{{ cocktails }}" as="c" hint-placeholder-count="4">
+              <sc-if value="{{ c.active }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex; align-items:center; background:#211A16; border-left:2px solid var(--ac,#79A63A); border-bottom:1px solid #221B18;">
+                  <button onClick="{{ c.go }}" style="flex:1; min-width:0; text-align:left; padding:13px 8px 13px 16px; background:transparent; border:none; color:#F2E9DC; font-family:'IBM Plex Sans',sans-serif; cursor:pointer;">
+                    <div style="font-size:13.5px;">{{ c.nom }}</div>
+                    <div style="margin-top:3px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--ac,#79A63A);">{{ c.meta }}</div>
+                  </button>
+                  <button onClick="{{ c.remove }}" style="flex:0 0 auto; width:26px; height:26px; margin-right:10px; background:transparent; border:1px solid #3A2F26; color:#6D5D4E; font-size:12px; cursor:pointer;" style-hover="color:#C9736E; border-color:#7A2B2B;">×</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ c.idle }}">
+                <div style="display:flex; align-items:center; border-left:2px solid transparent; border-bottom:1px solid #221B18;" style-hover="background:#191413;">
+                  <button onClick="{{ c.go }}" style="flex:1; min-width:0; text-align:left; padding:13px 8px 13px 16px; background:transparent; border:none; color:#A2917E; font-family:'IBM Plex Sans',sans-serif; cursor:pointer;" style-hover="color:#F2E9DC;">
+                    <div style="font-size:13.5px;">{{ c.nom }}</div>
+                    <div style="margin-top:3px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#6D5D4E;">{{ c.meta }}</div>
+                  </button>
+                  <button onClick="{{ c.remove }}" style="flex:0 0 auto; width:26px; height:26px; margin-right:10px; background:transparent; border:1px solid #2E2521; color:#4F433A; font-size:12px; cursor:pointer;" style-hover="color:#C9736E; border-color:#7A2B2B;">×</button>
+                </div>
+              </sc-if>
+            </sc-for>
+            <button onClick="{{ addCocktail }}" style="display:block; width:100%; padding:13px 18px; background:transparent; border:none; color:var(--ac,#79A63A); text-align:left; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="background:#191413;">+ Nouvelle fiche</button>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1.35fr 1fr; gap:18px; align-items:start;">
+            <div style="background:#1A1513; border:1px solid #2E2521;">
+              <div style="padding:20px 22px 16px; border-bottom:1px solid #2E2521; display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <input value="{{ c.nom }}" onChange="{{ onCocktailNom }}" style="flex:1; padding:8px 10px; background:#100D0C; border:1px solid #2E2521; color:#F2E9DC; font-family:'Playfair Display',serif; font-size:26px; outline:none;" style-focus="border-color:var(--ac,#79A63A);" />
+                  <button onClick="{{ removeCocktail }}" style="flex:0 0 auto; padding:9px 12px; background:transparent; border:1px solid #3A2F26; color:#8B7A69; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="color:#C9736E; border-color:#7A2B2B;">Supprimer</button>
+                </div>
+                <div style="display:flex; gap:10px;">
+                  <div style="flex:1; display:flex; flex-direction:column; gap:5px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.14em; color:#6D5D4E; text-transform:uppercase;">Famille</div>
+                    <dc-import name="Picker" value="{{ c.famille }}" options="{{ familleOptions }}" on-select="{{ onCocktailFamille }}" hint-size="100%,34px"></dc-import>
+                  </div>
+                  <div style="flex:1; display:flex; flex-direction:column; gap:5px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.14em; color:#6D5D4E; text-transform:uppercase;">Verre</div>
+                    <dc-import name="Picker" value="{{ c.verre }}" options="{{ verreOptions }}" on-select="{{ onCocktailVerre }}" hint-size="100%,34px"></dc-import>
+                  </div>
+                </div>
+                <textarea value="{{ c.desc }}" onChange="{{ onCocktailDesc }}" rows="2" placeholder="Description pour la carte…" style="width:100%; padding:9px 10px; background:#100D0C; border:1px solid #2E2521; color:#A2917E; font-family:'IBM Plex Sans',sans-serif; font-size:13px; resize:vertical; outline:none;" style-focus="border-color:var(--ac,#79A63A);"></textarea>
+              </div>
+
+              <div style="display:grid; grid-template-columns:2fr 1.4fr .8fr .5fr; gap:12px; padding:11px 22px; border-bottom:1px solid #2E2521; font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.14em; color:#8B7A69; text-transform:uppercase;">
+                <div>Ingrédient</div><div style="text-align:center;">Quantité</div><div style="text-align:right;">Coût</div><div></div>
+              </div>
+              <sc-for list="{{ ings }}" as="i" hint-placeholder-count="5">
+                <div style="display:grid; grid-template-columns:2fr 1.4fr .8fr .5fr; gap:12px; align-items:center; padding:10px 22px; border-bottom:1px solid #221B18;">
+                  <dc-import name="Picker" value="{{ i.ref }}" options="{{ ingOptions }}" on-select="{{ i.onRef }}" hint-size="100%,34px"></dc-import>
+                  <div style="display:flex; align-items:center; justify-content:center; gap:7px;">
+                    <button onClick="{{ i.minus }}" style="width:24px; height:24px; background:#211A16; border:1px solid #2E2521; color:#A2917E; font-size:13px; cursor:pointer;" style-hover="color:#F2E9DC;">–</button>
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; min-width:76px; text-align:center;">{{ i.dose }}</span>
+                    <button onClick="{{ i.plus }}" style="width:24px; height:24px; background:#211A16; border:1px solid #2E2521; color:#A2917E; font-size:13px; cursor:pointer;" style-hover="color:#F2E9DC;">+</button>
+                  </div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right;">{{ i.cout }}</div>
+                  <button onClick="{{ i.remove }}" style="justify-self:end; width:24px; height:24px; background:transparent; border:1px solid #2E2521; color:#6D5D4E; font-size:12px; cursor:pointer;" style-hover="color:#C9736E; border-color:#7A2B2B;">×</button>
+                </div>
+              </sc-for>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 22px;">
+                <div style="display:flex; gap:8px;">
+                  <button onClick="{{ addIng }}" style="background:transparent; border:1px dashed #3A2F26; color:var(--ac,#79A63A); padding:8px 13px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="border-color:var(--ac,#79A63A);">+ Ingrédient</button>
+                  <button onClick="{{ openNewRefForIng }}" style="background:transparent; border:1px dashed #3A2F26; color:#8B7A69; padding:8px 13px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="color:var(--ac,#79A63A); border-color:var(--ac,#79A63A);">+ Référence suivie</button>
+                  <button onClick="{{ openNewUntrackedForIng }}" style="background:transparent; border:1px dashed #3A2F26; color:#8B7A69; padding:8px 13px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="color:var(--ac,#79A63A); border-color:var(--ac,#79A63A);">+ Garniture</button>
+                </div>
+                <div style="display:flex; align-items:baseline; gap:12px;">
+                  <span style="font-size:12.5px; color:#8B7A69;">Coût matière</span>
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:15px; color:var(--ac2,#9BC65C);">{{ recipeCost }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <sc-if value="{{ menuOk }}" hint-placeholder-val="{{ true }}">
+                <div style="background:#1E2A12; border:1px solid #2F4A1C; padding:22px; display:flex; flex-direction:column; gap:16px;">
+                  <div style="display:flex; align-items:baseline; justify-content:space-between;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.16em; color:#A9C98F; text-transform:uppercase;">Prix carte TTC</div>
+                    <div style="font-family:'Playfair Display',serif; font-size:38px; line-height:1;">{{ menuPrice }}</div>
+                  </div>
+                  <input type="range" min="8" max="30" step="0.5" value="{{ price }}" onChange="{{ onPrice }}" style="width:100%;" />
+                  <sc-for list="{{ margin }}" as="m" hint-placeholder-count="4">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding-top:11px; border-top:1px solid #2C3D1B;">
+                      <div style="font-size:13px; color:#B4CFA0;">{{ m.k }}</div>
+                      <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#F2E9DC;">{{ m.v }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ menuUnder }}">
+                <div style="background:#2A1B1A; border:1px solid #4A2A28; padding:22px; display:flex; flex-direction:column; gap:16px;">
+                  <div style="display:flex; align-items:baseline; justify-content:space-between;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.16em; color:#D9948E; text-transform:uppercase;">Sous le plancher {{ margeMinLabel }}</div>
+                    <div style="font-family:'Playfair Display',serif; font-size:38px; line-height:1;">{{ menuPrice }}</div>
+                  </div>
+                  <input type="range" min="8" max="30" step="0.5" value="{{ price }}" onChange="{{ onPrice }}" style="width:100%;" />
+                  <sc-for list="{{ margin }}" as="m" hint-placeholder-count="4">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding-top:11px; border-top:1px solid #402825;">
+                      <div style="font-size:13px; color:#C9A29E;">{{ m.k }}</div>
+                      <div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:#F2E9DC;">{{ m.v }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <div style="background:#1A1513; border:1px solid #2E2521; padding:20px; display:flex; flex-direction:column; gap:11px;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.16em; color:#8B7A69; text-transform:uppercase;">Prix conseillé</div>
+                <div style="font-size:13px; color:#A2917E; text-wrap:pretty;">Pour tenir la marge cible de {{ margeCibleLabel }}, cette fiche se vend <span style="color:var(--ac2,#9BC65C);">{{ suggested }}</span>.</div>
+                <button onClick="{{ applySuggested }}" style="margin-top:4px; padding:9px; background:transparent; border:1px solid #3A2F26; color:var(--ac,#79A63A); font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="border-color:var(--ac,#79A63A);">Appliquer ce prix</button>
+              </div>
+              <div style="background:#1A1513; border:1px solid #2E2521; padding:20px; display:flex; flex-direction:column; gap:10px;">
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.16em; color:#8B7A69; text-transform:uppercase;">Faisabilité au stock</div>
+                <div style="font-family:'Playfair Display',serif; font-size:26px; color:var(--ac2,#9BC65C);">{{ feasible }}</div>
+                <div style="font-size:13px; color:#A2917E; text-wrap:pretty;">{{ feasibleNote }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSeuils }}">
+        <div style="display:grid; grid-template-columns:1fr 320px; gap:18px; align-items:start;">
+          <div style="display:flex; flex-direction:column; gap:18px;">
+            <div style="background:#1A1513; border:1px solid #2E2521;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 20px; border-bottom:1px solid #2E2521;">
+                <div style="font-family:'Playfair Display',serif; font-size:17px;">Maintien du stock</div>
+                <div style="font-size:12.5px; color:#6D5D4E;">Seuil d'alerte, prix d'achat et marge par référence</div>
+              </div>
+              <div style="display:grid; grid-template-columns:2fr .7fr 1.3fr 1fr .8fr .7fr 66px; gap:12px; padding:11px 20px; border-bottom:1px solid #2E2521; font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.14em; color:#8B7A69; text-transform:uppercase;">
+                <div>Référence</div><div style="text-align:right;">Stock</div><div style="text-align:center;">Seuil</div><div style="text-align:center;">Achat HT</div><div style="text-align:center;">Marge %</div><div style="text-align:right;">Statut</div><div></div>
+              </div>
+              <sc-for list="{{ seuilRows }}" as="r" hint-placeholder-count="12">
+                <div style="display:grid; grid-template-columns:2fr .7fr 1.3fr 1fr .8fr .7fr 66px; gap:12px; align-items:center; padding:11px 20px; border-bottom:1px solid #221B18;">
+                  <div style="min-width:0;">
+                    <div style="font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.nom }}</div>
+                    <div style="font-size:11.5px; color:#6D5D4E;">{{ r.sub }}</div>
+                  </div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right;">{{ r.stock }}</div>
+                  <div style="display:flex; align-items:center; justify-content:center; gap:7px;">
+                    <button onClick="{{ r.minus }}" style="width:24px; height:24px; background:#211A16; border:1px solid #2E2521; color:#A2917E; font-size:13px; cursor:pointer;" style-hover="color:#F2E9DC;">–</button>
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; min-width:24px; text-align:center;">{{ r.seuil }}</span>
+                    <button onClick="{{ r.plus }}" style="width:24px; height:24px; background:#211A16; border:1px solid #2E2521; color:#A2917E; font-size:13px; cursor:pointer;" style-hover="color:#F2E9DC;">+</button>
+                  </div>
+                  <input value="{{ r.achat }}" onChange="{{ r.onAchat }}" onBlur="{{ r.blurAchat }}" style="width:100%; padding:6px 9px; background:#100D0C; border:1px solid #2E2521; color:#F2E9DC; font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right; outline:none;" style-focus="border-color:var(--ac,#79A63A);" />
+                  <input value="{{ r.marge }}" onChange="{{ r.onMarge }}" onBlur="{{ r.blurMarge }}" style="width:100%; padding:6px 9px; background:#100D0C; border:1px solid #2E2521; color:#F2E9DC; font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right; outline:none;" style-focus="border-color:var(--ac,#79A63A);" />
+                  <sc-if value="{{ r.low }}"><div style="justify-self:end; font-family:'IBM Plex Mono',monospace; font-size:10px; color:#141010; background:#C9736E; padding:3px 7px;">SOUS SEUIL</div></sc-if>
+                  <sc-if value="{{ r.fine }}"><div style="justify-self:end; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#8FB273;">suffisant</div></sc-if>
+                  <div style="display:flex; gap:5px; justify-self:end;">
+                    <button onClick="{{ r.edit }}" style="width:26px; height:26px; background:#211A16; border:1px solid #2E2521; color:#A2917E; font-family:'IBM Plex Mono',monospace; font-size:10px; cursor:pointer;" style-hover="color:var(--ac,#79A63A); border-color:var(--ac,#79A63A);">ÉD</button>
+                    <button onClick="{{ r.remove }}" style="width:26px; height:26px; background:#211A16; border:1px solid #2E2521; color:#6D5D4E; font-size:12px; cursor:pointer;" style-hover="color:#C9736E; border-color:#7A2B2B;">×</button>
+                  </div>
+                </div>
+              </sc-for>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 20px; font-size:12px; color:#6D5D4E;">
+                <span>Modifier un prix d'achat recalcule aussitôt le coût par dose et le prix conseillé.</span>
+                <span>{{ seuilCount }}</span>
+              </div>
+            </div>
+
+            <div style="background:#1A1513; border:1px solid #2E2521;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 20px; border-bottom:1px solid #2E2521;">
+                <div style="font-family:'Playfair Display',serif; font-size:17px;">Références non suivies</div>
+                <button onClick="{{ openCreateUntracked }}" style="background:transparent; border:1px solid #3A2F26; color:var(--ac,#79A63A); padding:5px 11px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="border-color:var(--ac,#79A63A);">+ Garniture</button>
+              </div>
+              <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 66px; gap:12px; padding:11px 20px; border-bottom:1px solid #2E2521; font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.14em; color:#8B7A69; text-transform:uppercase;">
+                <div>Garniture, épice, aromate</div><div>Unité</div><div style="text-align:right;">Coût unitaire</div><div style="text-align:right;">Fiches</div><div></div>
+              </div>
+              <sc-for list="{{ untrackedRows }}" as="r" hint-placeholder-count="5">
+                <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 66px; gap:12px; align-items:center; padding:11px 20px; border-bottom:1px solid #221B18;">
+                  <div style="min-width:0;">
+                    <div style="font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.nom }}</div>
+                    <div style="font-size:11.5px; color:#6D5D4E;">{{ r.sub }}</div>
+                  </div>
+                  <div style="font-size:12.5px; color:#A2917E;">{{ r.unite }}</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right; color:var(--ac2,#9BC65C);">{{ r.cout }}</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; text-align:right; color:#8B7A69;">{{ r.usage }}</div>
+                  <div style="display:flex; gap:5px; justify-self:end;">
+                    <button onClick="{{ r.edit }}" style="width:26px; height:26px; background:#211A16; border:1px solid #2E2521; color:#A2917E; font-family:'IBM Plex Mono',monospace; font-size:10px; cursor:pointer;" style-hover="color:var(--ac,#79A63A); border-color:var(--ac,#79A63A);">ÉD</button>
+                    <button onClick="{{ r.remove }}" style="width:26px; height:26px; background:#211A16; border:1px solid #2E2521; color:#6D5D4E; font-size:12px; cursor:pointer;" style-hover="color:#C9736E; border-color:#7A2B2B;">×</button>
+                  </div>
+                </div>
+              </sc-for>
+              <div style="padding:13px 20px; font-size:12px; color:#6D5D4E; text-wrap:pretty;">Ni stock, ni seuil, ni inventaire : ces références servent uniquement à chiffrer les fiches cocktails.</div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div style="background:#1A1513; border:1px solid #2E2521;">
+              <div style="padding:15px 18px; border-bottom:1px solid #2E2521; font-family:'Playfair Display',serif; font-size:17px;">Mise à jour par fichier Excel</div>
+              <sc-if value="{{ impIdle }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:22px 18px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;">
+                  <div style="width:46px; height:46px; border:1px solid #2E2521; background:repeating-linear-gradient(135deg,#1F1917 0 7px,#241D19 7px 14px);"></div>
+                  <div style="font-size:13px; color:#A2917E; text-wrap:pretty;">Déposez un .xlsx ou .csv pour mettre à jour les références et les quantités en stock.</div>
+                  <label style="padding:9px 14px; background:var(--ac,#79A63A); color:#141010; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;">
+                    Choisir un fichier
+                    <input type="file" accept=".xlsx,.xls,.csv" onChange="{{ onFile }}" style="display:none;" />
+                  </label>
+                </div>
+              </sc-if>
+              <sc-if value="{{ impMapping }}">
+                <div style="padding:16px 18px; display:flex; flex-direction:column; gap:14px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <div style="font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ impName }}</div>
+                    <button onClick="{{ impCancel }}" style="flex:0 0 auto; background:transparent; border:1px solid #2E2521; color:#8B7A69; padding:4px 9px; font-family:'IBM Plex Mono',monospace; font-size:10px; text-transform:uppercase; cursor:pointer;" style-hover="color:#F2E9DC;">Annuler</button>
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:9px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.14em; color:#6D5D4E; text-transform:uppercase;">Correspondance des colonnes</div>
+                    <sc-for list="{{ impMap }}" as="m" hint-placeholder-count="5">
+                      <div style="display:grid; grid-template-columns:1fr 1.1fr; gap:9px; align-items:center;">
+                        <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#A2917E;">{{ m.col }}</div>
+                        <dc-import name="Picker" value="{{ m.value }}" options="{{ impFields }}" on-select="{{ m.on }}" hint-size="100%,34px"></dc-import>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="border-top:1px solid #221B18; padding-top:12px; display:flex; flex-direction:column; gap:7px;">
+                    <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.14em; color:#6D5D4E; text-transform:uppercase;">Aperçu · {{ impCount }}</div>
+                    <sc-for list="{{ impPreview }}" as="r" hint-placeholder-count="4">
+                      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px;">
+                        <span style="color:#F2E9DC; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ r.nom }}</span>
+                        <span style="font-family:'IBM Plex Mono',monospace; color:#8B7A69; flex:0 0 auto;">{{ r.v }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <button onClick="{{ impApply }}" style="padding:10px; background:var(--ac,#79A63A); border:none; color:#141010; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer;" style-hover="background:var(--ac2,#9BC65C);">Valider l'import</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ impDone }}">
+                <div style="padding:22px 18px; display:flex; flex-direction:column; gap:11px;">
+                  <div style="font-family:'Playfair Display',serif; font-size:22px; color:var(--ac2,#9BC65C);">Import appliqué</div>
+                  <div style="font-size:13px; color:#A2917E; text-wrap:pretty;">{{ impDoneNote }}</div>
+                  <button onClick="{{ impCancel }}" style="padding:9px; background:transparent; border:1px solid #3A2F26; color:var(--ac,#79A63A); font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="border-color:var(--ac,#79A63A);">Nouvel import</button>
+                </div>
+              </sc-if>
+            </div>
+            <div style="background:#1A1513; border:1px solid #2E2521; padding:18px; display:flex; flex-direction:column; gap:10px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.16em; color:#8B7A69; text-transform:uppercase;">Historique des imports</div>
+              <sc-for list="{{ impHistory }}" as="h" hint-placeholder-count="3">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                  <div style="font-size:12.5px; color:#A2917E; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ h.k }}</div>
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#6D5D4E; flex:0 0 auto;">{{ h.v }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isBareme }}">
+        <div style="display:grid; grid-template-columns:1.1fr 1fr; gap:18px; align-items:start;">
+          <div style="background:#1A1513; border:1px solid #2E2521;">
+            <div style="padding:15px 20px; border-bottom:1px solid #2E2521; font-family:'Playfair Display',serif; font-size:17px;">Barème des droits d'alcool</div>
+            <sc-for list="{{ params }}" as="pr" hint-placeholder-count="5">
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:18px; padding:14px 20px; border-bottom:1px solid #221B18;">
+                <div style="min-width:0;">
+                  <div style="font-size:13.5px;">{{ pr.k }}</div>
+                  <div style="font-size:11.5px; color:#6D5D4E; text-wrap:pretty;">{{ pr.n }}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:9px; flex:0 0 auto;">
+                  <input value="{{ pr.v }}" onChange="{{ pr.on }}" onBlur="{{ pr.blur }}" style="width:92px; padding:7px 9px; background:#100D0C; border:1px solid #2E2521; color:#F2E9DC; font-family:'IBM Plex Mono',monospace; font-size:13px; text-align:right; outline:none;" style-focus="border-color:var(--ac,#79A63A);" />
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8B7A69; min-width:78px;">{{ pr.unit }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#1A1513; border:1px solid #2E2521;">
+            <div style="padding:15px 20px; border-bottom:1px solid #2E2521; font-family:'Playfair Display',serif; font-size:17px;">Effet sur la dose</div>
+            <sc-for list="{{ baremeExamples }}" as="e" hint-placeholder-count="5">
+              <div style="display:grid; grid-template-columns:1.5fr .8fr .8fr; gap:12px; align-items:center; padding:12px 20px; border-bottom:1px solid #221B18;">
+                <div>
+                  <div style="font-size:13px;">{{ e.k }}</div>
+                  <div style="font-size:11.5px; color:#6D5D4E;">{{ e.n }}</div>
+                </div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right; color:var(--ac3,#A3C86B);">{{ e.taxe }}</div>
+                <div style="font-family:'IBM Plex Mono',monospace; font-size:12px; text-align:right; color:#8B7A69;">{{ e.part }}</div>
+              </div>
+            </sc-for>
+            <div style="display:flex; justify-content:space-between; padding:13px 20px; font-size:11.5px; color:#6D5D4E;">
+              <span>Taxe par dose</span><span>part du coût matière</span>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSetup }}">
+        <div style="display:flex; flex-direction:column; gap:18px;">
+          <div style="background:#1A1513; border:1px solid #2E2521;">
+            <div style="padding:15px 20px; border-bottom:1px solid #2E2521; font-family:'Playfair Display',serif; font-size:17px;">Politique de prix</div>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr);">
+              <sc-for list="{{ pricingFields }}" as="pf" hint-placeholder-count="3">
+                <div style="padding:18px 20px; border-right:1px solid #221B18; display:flex; flex-direction:column; gap:9px;">
+                  <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.14em; color:#8B7A69; text-transform:uppercase;">{{ pf.k }}</div>
+                  <div style="display:flex; align-items:center; gap:9px;">
+                    <input value="{{ pf.v }}" onChange="{{ pf.on }}" onBlur="{{ pf.blur }}" style="width:88px; padding:7px 9px; background:#100D0C; border:1px solid #2E2521; color:#F2E9DC; font-family:'IBM Plex Mono',monospace; font-size:15px; text-align:right; outline:none;" style-focus="border-color:var(--ac,#79A63A);" />
+                    <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8B7A69;">{{ pf.unit }}</span>
+                  </div>
+                  <div style="font-size:11.5px; color:#6D5D4E; text-wrap:pretty;">{{ pf.n }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#1A1513; border:1px solid #2E2521;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 20px; border-bottom:1px solid #2E2521;">
+              <div style="font-family:'Playfair Display',serif; font-size:17px;">Catégories de produits</div>
+              <button onClick="{{ addCategory }}" style="background:transparent; border:1px solid #3A2F26; color:var(--ac,#79A63A); padding:5px 11px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="border-color:var(--ac,#79A63A);">+ Catégorie</button>
+            </div>
+            <div style="display:grid; grid-template-columns:1.4fr .8fr 1.4fr .8fr .8fr .4fr; gap:12px; padding:11px 20px; border-bottom:1px solid #2E2521; font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.14em; color:#8B7A69; text-transform:uppercase;">
+              <div>Nom</div><div style="text-align:center;">Dose</div><div>Régime fiscal</div><div style="text-align:center;">Marge</div><div style="text-align:center;">TVA</div><div></div>
+            </div>
+            <sc-for list="{{ categoryRows }}" as="c" hint-placeholder-count="6">
+              <div style="display:grid; grid-template-columns:1.4fr .8fr 1.4fr .8fr .8fr .4fr; gap:12px; align-items:center; padding:10px 20px; border-bottom:1px solid #221B18;">
+                <input value="{{ c.nom }}" onChange="{{ c.onNom }}" style="width:100%; padding:6px 9px; background:#100D0C; border:1px solid #2E2521; color:#F2E9DC; font-family:'IBM Plex Sans',sans-serif; font-size:13px; outline:none;" style-focus="border-color:var(--ac,#79A63A);" />
+                <input value="{{ c.dose }}" onChange="{{ c.onDose }}" onBlur="{{ c.blurDose }}" style="width:100%; padding:6px 9px; background:#100D0C; border:1px solid #2E2521; color:#F2E9DC; font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right; outline:none;" style-focus="border-color:var(--ac,#79A63A);" />
+                <dc-import name="Picker" value="{{ c.regime }}" options="{{ regimeOptions }}" on-select="{{ c.onRegime }}" hint-size="100%,34px"></dc-import>
+                <input value="{{ c.marge }}" onChange="{{ c.onMarge }}" onBlur="{{ c.blurMarge }}" style="width:100%; padding:6px 9px; background:#100D0C; border:1px solid #2E2521; color:#F2E9DC; font-family:'IBM Plex Mono',monospace; font-size:12.5px; text-align:right; outline:none;" style-focus="border-color:var(--ac,#79A63A);" />
+                <dc-import name="Picker" value="{{ c.tva }}" options="{{ tvaOptions }}" on-select="{{ c.onTva }}" hint-size="100%,34px"></dc-import>
+                <button onClick="{{ c.remove }}" style="justify-self:end; width:24px; height:24px; background:transparent; border:1px solid #2E2521; color:#6D5D4E; font-size:12px; cursor:pointer;" style-hover="color:#C9736E; border-color:#7A2B2B;">×</button>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:18px;">
+            <sc-for list="{{ simpleLists }}" as="l" hint-placeholder-count="5">
+              <div style="background:#1A1513; border:1px solid #2E2521; display:flex; flex-direction:column;">
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid #2E2521;">
+                  <div style="font-family:'Playfair Display',serif; font-size:16px;">{{ l.title }}</div>
+                  <button onClick="{{ l.add }}" style="background:transparent; border:1px solid #3A2F26; color:var(--ac,#79A63A); padding:4px 10px; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="border-color:var(--ac,#79A63A);">+ Ajouter</button>
+                </div>
+                <sc-for list="{{ l.items }}" as="i" hint-placeholder-count="4">
+                  <div style="display:flex; align-items:center; gap:10px; padding:9px 18px; border-bottom:1px solid #221B18;">
+                    <input value="{{ i.v }}" onChange="{{ i.on }}" style="flex:1; padding:6px 9px; background:#100D0C; border:1px solid #2E2521; color:#F2E9DC; font-family:'IBM Plex Sans',sans-serif; font-size:13px; outline:none;" style-focus="border-color:var(--ac,#79A63A);" />
+                    <button onClick="{{ i.remove }}" style="flex:0 0 auto; width:24px; height:24px; background:transparent; border:1px solid #2E2521; color:#6D5D4E; font-size:12px; cursor:pointer;" style-hover="color:#C9736E; border-color:#7A2B2B;">×</button>
+                  </div>
+                </sc-for>
+                <div style="padding:12px 18px; font-size:11.5px; color:#6D5D4E; text-wrap:pretty;">{{ l.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </main>
+
+  <sc-if value="{{ modalOpen }}">
+    <div style="position:fixed; top:0; right:0; bottom:0; left:0; background:rgba(10,8,7,.72); display:grid; place-items:center; z-index:80; padding:30px;">
+      <div style="width:580px; max-width:100%; background:#171211; border:1px solid #3A2F26; box-shadow:0 30px 70px rgba(0,0,0,.6);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid #2E2521;">
+          <div style="font-family:'Playfair Display',serif; font-size:20px;">{{ modalTitle }}</div>
+          <button onClick="{{ closeModal }}" style="background:transparent; border:1px solid #2E2521; color:#8B7A69; width:28px; height:28px; font-size:13px; cursor:pointer;" style-hover="color:#F2E9DC;">×</button>
+        </div>
+        <div style="padding:18px 22px; border-bottom:1px solid #221B18; display:flex; align-items:center; gap:10px;">
+          <div style="font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:.14em; color:#6D5D4E; text-transform:uppercase; flex:1;">Type de référence</div>
+          <sc-if value="{{ modalTracked }}" hint-placeholder-val="{{ true }}">
+            <button style="padding:7px 13px; background:var(--ac,#79A63A); color:#141010; border:none; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; cursor:default;">Suivie en stock</button>
+            <button onClick="{{ setUntracked }}" style="padding:7px 13px; background:transparent; color:#8B7A69; border:1px solid #2E2521; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer;" style-hover="color:#F2E9DC;">Non suivie</button>
+          </sc-if>
+          <sc-if value="{{ modalUntracked }}">
+            <button onClick="{{ setTracked }}" style="padding:7px 13px; background:transparent; color:#8B7A69; border:1px solid #2E2521; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer;" style-hover="color:#F2E9DC;">Suivie en stock</button>
+            <button style="padding:7px 13px; background:var(--ac,#79A63A); color:#141010; border:none; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; cursor:default;">Non suivie</button>
+          </sc-if>
+        </div>
+        <div style="padding:20px 22px; display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <sc-for list="{{ modalFields }}" as="fl" hint-placeholder-count="6">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.14em; color:#6D5D4E; text-transform:uppercase;">{{ fl.k }}</div>
+              <input value="{{ fl.v }}" onChange="{{ fl.on }}" placeholder="{{ fl.ph }}" style="width:100%; padding:8px 10px; background:#100D0C; border:1px solid #2E2521; color:#F2E9DC; font-family:'IBM Plex Sans',sans-serif; font-size:13px; outline:none;" style-focus="border-color:var(--ac,#79A63A);" />
+            </div>
+          </sc-for>
+          <sc-if value="{{ modalTracked }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.14em; color:#6D5D4E; text-transform:uppercase;">Catégorie</div>
+              <dc-import name="Picker" value="{{ modalCat }}" options="{{ catCreateOptions }}" on-select="{{ onModalCat }}" hint-size="100%,34px"></dc-import>
+            </div>
+          </sc-if>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:.14em; color:#6D5D4E; text-transform:uppercase;">Fournisseur</div>
+            <dc-import name="Picker" value="{{ modalFour }}" options="{{ fournisseurOptions }}" on-select="{{ onModalFour }}" hint-size="100%,34px"></dc-import>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px 22px; border-top:1px solid #2E2521;">
+          <div style="font-size:12.5px; color:#6D5D4E; max-width:36ch; text-wrap:pretty;">{{ modalHint }}</div>
+          <div style="display:flex; gap:9px;">
+            <button onClick="{{ closeModal }}" style="padding:9px 14px; background:transparent; border:1px solid #3A2F26; color:#8B7A69; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="color:#F2E9DC;">Annuler</button>
+            <button onClick="{{ saveModal }}" style="padding:9px 16px; background:var(--ac,#79A63A); border:none; color:#141010; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="background:var(--ac2,#9BC65C);">{{ modalCta }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ confirmOpen }}">
+    <div style="position:fixed; top:0; right:0; bottom:0; left:0; background:rgba(10,8,7,.76); display:grid; place-items:center; z-index:90; padding:30px;">
+      <div style="width:420px; max-width:100%; background:#171211; border:1px solid #4A2A28; box-shadow:0 30px 70px rgba(0,0,0,.65);">
+        <div style="padding:22px 24px 16px; display:flex; flex-direction:column; gap:9px;">
+          <div style="font-family:'Playfair Display',serif; font-size:20px;">{{ confirmTitle }}</div>
+          <div style="font-size:13px; color:#A2917E; text-wrap:pretty;">{{ confirmBody }}</div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:9px; padding:14px 24px; border-top:1px solid #2E2521;">
+          <button onClick="{{ confirmCancel }}" style="padding:9px 14px; background:transparent; border:1px solid #3A2F26; color:#8B7A69; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="color:#F2E9DC;">Annuler</button>
+          <button onClick="{{ confirmOk }}" style="padding:9px 16px; background:#7A2B2B; border:none; color:#F2E9DC; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;" style-hover="background:#9A3636;">{{ confirmLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accentPalette&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;tsType&quot;:&quot;string[]&quot;,&quot;default&quot;:[&quot;#79A63A&quot;,&quot;#9BC65C&quot;,&quot;#A3C86B&quot;],&quot;options&quot;:[[&quot;#79A63A&quot;,&quot;#9BC65C&quot;,&quot;#A3C86B&quot;],[&quot;#4E7A22&quot;,&quot;#7FA845&quot;,&quot;#8FB855&quot;],[&quot;#4F9A6A&quot;,&quot;#77BE93&quot;,&quot;#86C79E&quot;],[&quot;#9CB833&quot;,&quot;#BBD45C&quot;,&quot;#C3DA75&quot;]],&quot;section&quot;:&quot;Couleurs&quot;},&quot;margeCible&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:80,&quot;tsType&quot;:&quot;number&quot;,&quot;unit&quot;:&quot; %&quot;,&quot;min&quot;:50,&quot;max&quot;:92,&quot;section&quot;:&quot;Politique de prix&quot;},&quot;margeMin&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:75,&quot;tsType&quot;:&quot;number&quot;,&quot;unit&quot;:&quot; %&quot;,&quot;min&quot;:40,&quot;max&quot;:90,&quot;section&quot;:&quot;Politique de prix&quot;},&quot;tauxAccise&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:1954,&quot;tsType&quot;:&quot;number&quot;,&quot;unit&quot;:&quot; €/hLAP&quot;,&quot;min&quot;:1500,&quot;max&quot;:2500,&quot;section&quot;:&quot;Barème par défaut&quot;},&quot;tauxSS&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:625,&quot;tsType&quot;:&quot;number&quot;,&quot;unit&quot;:&quot; €/hLAP&quot;,&quot;min&quot;:400,&quot;max&quot;:900,&quot;section&quot;:&quot;Barème par défaut&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      screen:'dash', site:'tous', query:'', cat:'Tout',
+      productId:'rhum', marge:null,
+      levels:{}, fulls:{}, drafts:{},
+      seuils:{}, achats:{}, margesRef:{},
+      customRefs:[], edits:{}, deleted:[],
+      rates:{ accise:props.tauxAccise ?? 1954, ss:props.tauxSS ?? 625, vin:3.99, mousseux:9.89, biere:7.82 },
+      pricing:{ cible:props.margeCible ?? 80, min:props.margeMin ?? 75, arrondi:0.5 },
+      categories:[
+        { id:'Spiritueux', nom:'Spiritueux', dose:5, regime:'spiritueux', marge:80, tva:20 },
+        { id:'Liqueur', nom:'Liqueur', dose:5, regime:'spiritueux', marge:80, tva:20 },
+        { id:'Vin', nom:'Vin', dose:12, regime:'vin', marge:78, tva:20 },
+        { id:'Bière', nom:'Bière', dose:33, regime:'biere', marge:76, tva:20 },
+        { id:'Sirop', nom:'Sirop & maison', dose:3, regime:'aucun', marge:85, tva:10 },
+        { id:'Garniture', nom:'Garniture & épices', dose:1, regime:'aucun', marge:85, tva:20 },
+        { id:'Consommable', nom:'Consommable', dose:1, regime:'aucun', marge:80, tva:20 }
+      ],
+      lieux:['Réserve', 'Comptoir'],
+      fournisseurs:['Dugas', 'Maison du Whisky', 'Vinifera', 'Bièropholie', 'Marché', 'Metro', 'Maison'],
+      familles:['Signature', 'Classique', 'Au verre', 'Sans alcool'],
+      verres:['Coupe givrée', 'Old fashioned', 'Highball', 'Flûte', 'Nick & Nora'],
+      unites:['branche', 'trait', 'zeste', 'pincée', 'pièce', 'feuille'],
+      imp:{ step:'idle', name:'', map:{ A:'nom', B:'volume', C:'degre', D:'achat', E:'stock' } },
+      modal:null, confirm:null,
+      cocktailId:'manchot',
+      cocktails:[
+        { id:'manchot', nom:'Le Manchot Royal', famille:'Signature', verre:'Coupe givrée', prix:15,
+          desc:'Rhum agricole, cordial hibiscus maison, citron vert, voile d\u2019absinthe.',
+          ings:[{ ref:'rhum', cl:4 }, { ref:'hibiscus', cl:2 }, { ref:'lime', cl:1.5 }, { ref:'absinthe', cl:0.5 }, { ref:'zeste', cl:1 }, { ref:'service', cl:0 }] },
+        { id:'banquise', nom:'Banquise Fumée', famille:'Signature', verre:'Old fashioned', prix:14,
+          desc:'Rye, chartreuse verte, sirop d\u2019hibiscus, romarin brûlé.',
+          ings:[{ ref:'rye', cl:4.5 }, { ref:'chartreuse', cl:1.5 }, { ref:'hibiscus', cl:1 }, { ref:'romarin', cl:1 }, { ref:'service', cl:0 }] },
+        { id:'vermouthtonic', nom:'Vermouth & Tonic', famille:'Classique', verre:'Highball', prix:11,
+          desc:'Vermouth di Torino, tonic indien, tranche d\u2019orange.',
+          ings:[{ ref:'vermouth', cl:6 }, { ref:'tonic', cl:15 }, { ref:'service', cl:0 }] },
+        { id:'coupe', nom:'Coupe de champagne', famille:'Au verre', verre:'Flûte', prix:14,
+          desc:'Champagne extra-brut, service au verre.',
+          ings:[{ ref:'champagne', cl:12 }, { ref:'service', cl:0 }] }
+      ]
+    };
+  }
+
+  componentDidMount() { this.applyAccent(); }
+  componentDidUpdate() { this.applyAccent(); }
+  applyAccent() {
+    const p = this.props.accentPalette || ['#79A63A', '#9BC65C', '#A3C86B'];
+    const root = document.documentElement;
+    ['--ac', '--ac2', '--ac3'].forEach((k, i) => root.style.setProperty(k, p[i] || p[0]));
+  }
+
+  eur(n, d) { const k = d === undefined ? 2 : d; return (isFinite(n) ? n : 0).toLocaleString('fr-FR', { minimumFractionDigits:k, maximumFractionDigits:k }) + ' €'; }
+  num(n, d) { return (isFinite(n) ? n : 0).toLocaleString('fr-FR', { minimumFractionDigits:d || 0, maximumFractionDigits:d === undefined ? 1 : d }); }
+  pc(n) { return this.num(n, 1) + ' %'; }
+  parse(v) { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; }
+
+  field(key, shown, apply) {
+    return {
+      v:this.state.drafts[key] ?? shown,
+      on:e => { const raw = e.target.value; this.setState(s => ({ drafts:{ ...s.drafts, [key]:raw } })); apply(this.parse(raw)); },
+      blur:() => this.setState(s => { const d = { ...s.drafts }; delete d[key]; return { drafts:d }; })
+    };
+  }
+
+  get baseRefs() {
+    return [
+      { id:'rhum', nom:'Rhum agricole blanc 55°', marque:'Neisson · Martinique', cat:'Spiritueux', abv:55, vol:70, achat:24.90, stocks:{ 'Réserve':6, 'Comptoir':2 }, seuil:4, four:'Dugas' },
+      { id:'gin', nom:'Gin London Dry', marque:'Sipsmith · Londres', cat:'Spiritueux', abv:41.6, vol:70, achat:18.40, stocks:{ 'Réserve':3, 'Comptoir':2 }, seuil:5, four:'Dugas' },
+      { id:'rye', nom:'Whisky de seigle 100 % rye', marque:'Rittenhouse · Kentucky', cat:'Spiritueux', abv:50, vol:70, achat:27.50, stocks:{ 'Réserve':4, 'Comptoir':1 }, seuil:3, four:'Maison du Whisky' },
+      { id:'cognac', nom:'Cognac VSOP', marque:'Park · Cognac', cat:'Spiritueux', abv:40, vol:70, achat:32.00, stocks:{ 'Réserve':2, 'Comptoir':1 }, seuil:2, four:'Dugas' },
+      { id:'absinthe', nom:'Absinthe verte 68°', marque:'Jade · Pontarlier', cat:'Spiritueux', abv:68, vol:70, achat:41.00, stocks:{ 'Réserve':0, 'Comptoir':1 }, seuil:2, four:'Maison du Whisky' },
+      { id:'chartreuse', nom:'Chartreuse verte', marque:'Voiron', cat:'Liqueur', abv:55, vol:70, achat:46.00, stocks:{ 'Réserve':1, 'Comptoir':1 }, seuil:2, four:'Dugas' },
+      { id:'vermouth', nom:'Vermouth rouge di Torino', marque:'Cocchi · Asti', cat:'Liqueur', abv:16, vol:100, achat:11.20, stocks:{ 'Réserve':4, 'Comptoir':2 }, seuil:3, four:'Vinifera' },
+      { id:'champagne', nom:'Champagne extra-brut', marque:'Chartogne-Taillet', cat:'Vin', abv:12.5, vol:75, achat:29.00, stocks:{ 'Réserve':12, 'Comptoir':4 }, seuil:6, four:'Vinifera' },
+      { id:'blanc', nom:'Chenin sec Loire', marque:'Domaine Huet', cat:'Vin', abv:13, vol:75, achat:16.50, stocks:{ 'Réserve':9, 'Comptoir':3 }, seuil:6, four:'Vinifera' },
+      { id:'biere', nom:'Pils artisanale 33 cl', marque:'Brasserie Sainte-Cru', cat:'Bière', abv:5, vol:33, achat:1.55, stocks:{ 'Réserve':36, 'Comptoir':12 }, seuil:24, four:'Bièropholie' },
+      { id:'hibiscus', nom:'Cordial hibiscus maison', marque:'Production interne · lot 12', cat:'Sirop', abv:0, vol:100, achat:3.40, stocks:{ 'Réserve':2, 'Comptoir':1 }, seuil:2, four:'Maison' },
+      { id:'lime', nom:'Citron vert pressé', marque:'Frais · pressé du jour', cat:'Sirop', abv:0, vol:100, achat:8.40, stocks:{ 'Réserve':1, 'Comptoir':1 }, seuil:1, four:'Marché' },
+      { id:'tonic', nom:'Tonic indien 20 cl', marque:'Fever-Tree', cat:'Sirop', abv:0, vol:20, achat:0.62, stocks:{ 'Réserve':48, 'Comptoir':18 }, seuil:24, four:'Bièropholie' },
+      { id:'romarin', nom:'Romarin frais', marque:'Aromate · brûlé au service', cat:'Garniture', abv:0, vol:1, achat:0.30, stocks:{}, seuil:0, four:'Marché', suivi:false, unite:'branche' },
+      { id:'zeste', nom:'Zeste de citron', marque:'Découpe minute', cat:'Garniture', abv:0, vol:1, achat:0.15, stocks:{}, seuil:0, four:'Marché', suivi:false, unite:'zeste' },
+      { id:'tonka', nom:'Fève tonka râpée', marque:'Épice · râpe minute', cat:'Garniture', abv:0, vol:1, achat:0.25, stocks:{}, seuil:0, four:'Metro', suivi:false, unite:'pincée' },
+      { id:'bitters', nom:'Bitters aromatiques', marque:'Angostura', cat:'Garniture', abv:0, vol:1, achat:0.12, stocks:{}, seuil:0, four:'Dugas', suivi:false, unite:'trait' },
+      { id:'service', nom:'Glace, garniture, verrerie', marque:'Consommables · au service', cat:'Consommable', abv:0, vol:1, achat:0.35, stocks:{}, seuil:0, four:'Metro', suivi:false, unite:'service' }
+    ];
+  }
+
+  get catalog() {
+    const st = this.state;
+    return [...this.baseRefs, ...st.customRefs]
+      .filter(p => !st.deleted.includes(p.id))
+      .map(p => {
+        const e = st.edits[p.id] || {};
+        const m = { ...p, ...e };
+        return { ...m, achat:st.achats[p.id] ?? m.achat, seuil:st.seuils[p.id] ?? m.seuil, stocks:m.stocks || {} };
+      });
+  }
+  tracked(p) { return p.suivi !== false && p.cat !== 'Consommable'; }
+  get trackedRefs() { return this.catalog.filter(p => this.tracked(p)); }
+  get untrackedRefs() { return this.catalog.filter(p => p.suivi === false && p.cat !== 'Consommable'); }
+  find(id) { return this.catalog.find(p => p.id === id); }
+  category(p) { return this.state.categories.find(c => c.id === p.cat) || this.state.categories[0]; }
+  margeOf(p) { return this.state.margesRef[p.id] ?? this.category(p).marge; }
+  doseCl(p) { return this.category(p).dose || 5; }
+  tvaOf(p) { return this.category(p).tva; }
+
+  fiscal(p) {
+    const r = this.state.rates, dose = this.doseCl(p), reg = this.category(p).regime;
+    const hlap = (dose / 100) * (p.abv / 100) / 100;
+    const hl = (dose / 100) / 100;
+    let accise = 0, ss = 0, base = 'non soumis';
+    if (reg === 'spiritueux' && p.abv > 0) { accise = hlap * r.accise; base = this.num(r.accise) + ' €/hL d\u2019alcool pur'; }
+    else if (reg === 'vin') { accise = hl * (p.abv > 12.4 ? r.mousseux : r.vin); base = 'tarif vin au hL'; }
+    else if (reg === 'mousseux') { accise = hl * r.mousseux; base = 'tarif mousseux au hL'; }
+    else if (reg === 'biere') { accise = hl * r.biere * p.abv; base = this.num(r.biere, 2) + ' €/hL par degré'; }
+    else if (reg === 'intermediaire') { accise = hl * r.mousseux; base = 'produit intermédiaire au hL'; }
+    if (p.abv > 18) ss = hlap * r.ss;
+    return { accise, ss, hlap, base, dose };
+  }
+
+  stockOf(p) {
+    const st = this.state, s = st.site, stocks = p.stocks || {};
+    if (s === 'tous') return st.lieux.reduce((a, l) => a + (stocks[l] || 0), 0);
+    return stocks[s] || 0;
+  }
+  coutDose(p) { return p.achat / (p.vol / this.doseCl(p)); }
+  coutCl(p) { return p.achat / p.vol; }
+  round(v) { const a = this.state.pricing.arrondi || 0.5; return Math.round(v / a) * a; }
+  prixFor(p, marge) {
+    const m = Math.min(Math.max(marge, 1), 95);
+    return this.round(this.coutDose(p) / (1 - m / 100) * (1 + this.tvaOf(p) / 100));
+  }
+  margeReelle(p, ttc) {
+    const ht = ttc / (1 + this.tvaOf(p) / 100);
+    return ht > 0 ? (ht - this.coutDose(p)) / ht * 100 : 0;
+  }
+  ingCost(i) {
+    const p = this.find(i.ref);
+    if (!p) return 0;
+    return p.suivi === false ? p.achat * (i.cl || 0) : this.coutCl(p) * i.cl;
+  }
+  cocktailCost(c) { return c.ings.reduce((a, i) => a + this.ingCost(i), 0); }
+  set(k, v) { return () => this.setState({ [k]:v }); }
+  patchCocktail(fn) { this.setState(s => ({ cocktails:s.cocktails.map(c => c.id === s.cocktailId ? fn({ ...c }) : c) })); }
+  ask(title, body, label, onOk) { this.setState({ confirm:{ title, body, label, onOk } }); }
+
+  refModalFor(p) {
+    return {
+      mode:'edit', id:p.id, suivi:p.suivi !== false,
+      nom:p.nom, marque:p.marque, cat:p.cat, four:p.four,
+      vol:String(p.vol), abv:String(p.abv), achat:this.num(p.achat, 2),
+      seuil:String(p.seuil), unite:p.unite || 'pièce', target:null
+    };
+  }
+  blankModal(suivi, target) {
+    const cats = this.state.categories.filter(c => c.id !== 'Consommable' && c.id !== 'Garniture');
+    return {
+      mode:'create', id:null, suivi,
+      nom:'', marque:'', cat:suivi ? (cats[0] ? cats[0].id : 'Spiritueux') : 'Garniture',
+      four:this.state.fournisseurs[0], vol:'70', abv:'40', achat:'', seuil:'2', unite:'branche',
+      target:target ?? null
+    };
+  }
+
+  renderVals() {
+    const st = this.state, pr = st.pricing;
+    const trackedRefs = this.trackedRefs, untracked = this.untrackedRefs;
+    const nav = [
+      { key:'dash', label:'Comptoir', num:'01' },
+      { key:'refs', label:'Références', num:'02' },
+      { key:'inv', label:'Inventaire', num:'03' },
+      { key:'cocktail', label:'Cartes & recettes', num:'04' },
+      { key:'seuils', label:'Cave & seuils', num:'05' },
+      { key:'bareme', label:'Barème fiscal', num:'06' },
+      { key:'setup', label:'Configuration', num:'07' }
+    ].map(n => {
+      const on = st.screen === n.key || (n.key === 'refs' && st.screen === 'product');
+      return { ...n, active:on, idle:!on, go:this.set('screen', n.key) };
+    });
+
+    const totalValue = trackedRefs.reduce((a, p) => a + this.stockOf(p) * p.achat, 0);
+    const doses = trackedRefs.filter(p => this.category(p).regime === 'spiritueux')
+      .reduce((a, p) => a + this.stockOf(p) * (p.vol / 5), 0);
+    const low = trackedRefs.filter(p => this.stockOf(p) <= p.seuil);
+    const cocktailMarge = c => { const ht = c.prix / 1.2; return ht > 0 ? (ht - this.cocktailCost(c)) / ht * 100 : 0; };
+    const avgMarge = st.cocktails.length ? st.cocktails.reduce((a, c) => a + cocktailMarge(c), 0) / st.cocktails.length : 0;
+
+    const titles = {
+      dash:['Bonsoir, le comptoir est ouvert', 'Valeur de la cave, alertes et marges de la carte'],
+      refs:['Le grand registre', 'Références suivies et non suivies'],
+      product:['Fiche bouteille', 'Coût de revient, part fiscale et prix conseillé'],
+      inv:['Inventaire du lundi', 'Comptage à la bouteille · vide, ¼, ½, ¾, pleine'],
+      cocktail:['Cartes & recettes', 'Saisie des fiches, coût matière et marge'],
+      seuils:['Cave & seuils', 'Maintien du stock, garnitures et import de fichier'],
+      bareme:['Barème fiscal', 'Droits d\u2019accise et cotisation sécurité sociale'],
+      setup:['Configuration', 'Politique de prix, catégories et référentiels']
+    };
+
+    const q = st.query.toLowerCase();
+    const listable = this.catalog.filter(p => p.cat !== 'Consommable');
+    const filtered = listable.filter(p =>
+      (st.cat === 'Tout' || (st.cat === '__untracked' ? p.suivi === false : p.cat === st.cat)) &&
+      (q === '' || (p.nom + ' ' + p.marque + ' ' + p.four).toLowerCase().includes(q)));
+    const unit = p => (this.doseCl(p) > 5 || p.cat === 'Sirop' ? ' u.' : ' bt');
+
+    const askDeleteRef = p => this.ask(
+      'Supprimer ' + p.nom + ' ?',
+      'La référence disparaît de la cave et des listes. Les fiches cocktails qui l\u2019utilisent devront être corrigées.',
+      'Supprimer', () => this.setState(s => ({ deleted:[...s.deleted, p.id], confirm:null, screen:s.screen === 'product' ? 'refs' : s.screen })));
+
+    const rows = filtered.map(p => {
+      const untr = p.suivi === false;
+      const s = this.stockOf(p), m = this.margeOf(p), ttc = untr ? 0 : this.prixFor(p, m);
+      return {
+        nom:p.nom, sub:untr ? p.marque + ' · non suivie · ' + (p.unite || 'pièce') : p.marque + ' · ' + p.four,
+        cat:this.category(p).nom,
+        abv:untr || p.abv === 0 ? '—' : this.num(p.abv, 1) + '°',
+        stock:untr ? '—' : s + unit(p),
+        valeur:untr ? '—' : this.eur(s * p.achat),
+        coutDose:untr ? this.eur(p.achat) : this.eur(this.coutDose(p)),
+        marge:untr ? '—' : this.num(this.margeReelle(p, ttc), 0) + ' %',
+        prix:untr ? '—' : this.eur(ttc),
+        low:!untr && s <= p.seuil, fine:!untr && s > p.seuil, untracked:untr,
+        open:() => untr ? this.setState({ modal:this.refModalFor(p) }) : this.setState({ screen:'product', productId:p.id, marge:m }),
+        edit:() => this.setState({ modal:this.refModalFor(p) }),
+        remove:() => askDeleteRef(p)
+      };
+    });
+
+    const p = this.find(st.productId) || trackedRefs[0];
+    const marge = st.marge ?? this.margeOf(p);
+    const f = this.fiscal(p), cd = this.coutDose(p);
+    const ht = cd / (1 - marge / 100), ttc = this.prixFor(p, marge);
+    const reelle = this.margeReelle(p, ttc);
+
+    const product = {
+      nom:p.nom, sub:p.marque + ' · ' + p.four, doseCl:this.num(f.dose, 0),
+      coeffEq:'× ' + this.num(ht / cd, 2), ok:reelle >= pr.min, under:reelle < pr.min,
+      specs:[
+        { k:'Format', v:p.vol + ' cl' },
+        { k:'Degré', v:p.abv === 0 ? 'sans alcool' : this.num(p.abv, 1) + ' % vol.' },
+        { k:'Prix d\u2019achat HT', v:this.eur(p.achat) },
+        { k:'Doses de ' + f.dose + ' cl', v:this.num(p.vol / f.dose, 1) + ' par bouteille' },
+        { k:'Stock (' + (st.site === 'tous' ? 'tous lieux' : st.site) + ')', v:this.stockOf(p) + ' · seuil ' + p.seuil },
+        { k:'Valeur immobilisée', v:this.eur(this.stockOf(p) * p.achat) }
+      ],
+      fiscal:[
+        { k:'Alcool pur dans la dose', n:f.dose + ' cl à ' + this.num(p.abv, 1) + ' % vol.', v:this.num(f.hlap * 100000, 2) + ' cl AP' },
+        { k:'Droit d\u2019accise', n:f.base, v:this.eur(f.accise, 3) },
+        { k:'Cotisation sécurité sociale', n:f.ss ? this.num(st.rates.ss) + ' €/hL AP' : '—', v:this.eur(f.ss, 3) },
+        { k:'Total taxes par dose', n:'compris dans le prix d\u2019achat', v:this.eur(f.accise + f.ss, 3) },
+        { k:'Poids sur le coût matière', n:'taxes ÷ coût de la dose', v:this.pc((f.accise + f.ss) / cd * 100) }
+      ],
+      waterfall:[
+        { k:'Coût de la dose', n:'achat HT ÷ ' + this.num(p.vol / f.dose, 1) + ' doses', v:this.eur(cd, 3) },
+        { k:'Prix de vente HT', n:'coût ÷ (1 − marge de ' + this.num(marge, 0) + ' %)', v:this.eur(ht) },
+        { k:'TVA sur place', n:this.tvaOf(p) + ' % · ' + this.category(p).nom, v:this.eur(ht * this.tvaOf(p) / 100) },
+        { k:'Prix TTC calculé', n:'avant arrondi à ' + this.num(pr.arrondi, 2) + ' €', v:this.eur(ht * (1 + this.tvaOf(p) / 100)) }
+      ],
+      prixTTC:this.eur(ttc),
+      marginNote:'Marge réelle ' + this.pc(reelle) + ' · coût matière ' + this.pc(100 - reelle),
+      scenarios:[pr.min, pr.cible, Math.min(pr.cible + 5, 92)].map((m, i) => ({
+        k:['plancher', 'cible', 'premium'][i] + ' ' + this.num(m, 0) + ' %',
+        v:this.eur(this.prixFor(p, m)), n:'coefficient × ' + this.num(1 / (1 - m / 100), 2),
+        go:() => this.setState({ marge:m })
+      }))
+    };
+
+    const invList = trackedRefs.slice(0, 8);
+    const invRows = invList.map(x => {
+      const lv = st.levels[x.id] ?? 0.5;
+      const full = st.fulls[x.id] ?? this.stockOf(x);
+      return {
+        nom:x.nom, sub:x.marque, full, counted:this.eur((full + lv) * x.achat),
+        levels:[{ v:0, label:'vide' }, { v:0.25, label:'¼' }, { v:0.5, label:'½' }, { v:0.75, label:'¾' }, { v:1, label:'pleine' }]
+          .map(l => ({ label:l.label, on:lv === l.v, off:lv !== l.v, go:() => this.setState(s => ({ levels:{ ...s.levels, [x.id]:l.v } })) })),
+        minus:() => this.setState(s => ({ fulls:{ ...s.fulls, [x.id]:Math.max(0, (s.fulls[x.id] ?? this.stockOf(x)) - 1) } })),
+        plus:() => this.setState(s => ({ fulls:{ ...s.fulls, [x.id]:(s.fulls[x.id] ?? this.stockOf(x)) + 1 } }))
+      };
+    });
+    const invTotal = invList.reduce((a, x) => a + ((st.fulls[x.id] ?? this.stockOf(x)) + (st.levels[x.id] ?? 0.5)) * x.achat, 0);
+
+    const c = st.cocktails.find(x => x.id === st.cocktailId) || st.cocktails[0] || null;
+    const rCost = c ? this.cocktailCost(c) : 0;
+    const menuHT = c ? c.prix / 1.2 : 0;
+    const menuMarge = menuHT > 0 ? (menuHT - rCost) / menuHT * 100 : 0;
+    const suggested = this.round(rCost / (1 - pr.cible / 100) * 1.2);
+    const servings = c ? c.ings.filter(i => { const x = this.find(i.ref); return x && this.tracked(x) && i.cl > 0; })
+      .map(i => { const x = this.find(i.ref); return { nom:x.nom, n:Math.floor(this.stockOf(x) * x.vol / i.cl) }; })
+      .sort((a, b) => a.n - b.n) : [];
+    const limiting = servings[0];
+    const askDeleteCocktail = x => this.ask('Supprimer « ' + x.nom + ' » ?', 'La fiche et son chiffrage seront perdus.', 'Supprimer',
+      () => this.setState(s => {
+        const rest = s.cocktails.filter(y => y.id !== x.id);
+        return { cocktails:rest, cocktailId:rest.length ? rest[0].id : null, confirm:null };
+      }));
+
+    const md = st.modal || {};
+    const catOpts = st.categories.filter(x => x.id !== 'Consommable' && x.id !== 'Garniture').map(x => ({ value:x.id, label:x.nom }));
+    const modalFields = md.suivi
+      ? [{ key:'nom', k:'Nom de la référence', ph:'Mezcal espadín' }, { key:'marque', k:'Marque · origine', ph:'Del Maguey · Oaxaca' },
+         { key:'vol', k:'Volume (cl)', ph:'70' }, { key:'abv', k:'Degré (% vol.)', ph:'45' },
+         { key:'achat', k:'Prix d\u2019achat HT (€)', ph:'31,00' }, { key:'seuil', k:'Seuil d\u2019alerte', ph:'2' }]
+      : [{ key:'nom', k:'Nom', ph:'Romarin frais' }, { key:'marque', k:'Précision', ph:'Aromate · brûlé au service' },
+         { key:'unite', k:'Unité', ph:'branche' }, { key:'achat', k:'Coût par unité (€)', ph:'0,30' }];
+
+    return {
+      nav, pageTitle:titles[st.screen][0], pageSub:titles[st.screen][1],
+      margeCibleLabel:this.num(pr.cible, 0) + ' %', margeMinLabel:this.num(pr.min, 0) + ' %',
+      sites:[{ k:'tous', label:'Tous' }, ...st.lieux.map(l => ({ k:l, label:l }))]
+        .map(s => ({ label:s.label, active:st.site === s.k, idle:st.site !== s.k, go:this.set('site', s.k) })),
+      isDash:st.screen === 'dash', isRefs:st.screen === 'refs', isProduct:st.screen === 'product',
+      isInv:st.screen === 'inv', isCocktail:st.screen === 'cocktail',
+      isSeuils:st.screen === 'seuils', isBareme:st.screen === 'bareme', isSetup:st.screen === 'setup',
+      goSeuils:this.set('screen', 'seuils'), goBareme:this.set('screen', 'bareme'), back:this.set('screen', 'refs'),
+
+      stockValue:this.eur(totalValue, 0), doseCount:this.num(doses, 0), refCount:trackedRefs.length,
+      kpis:[
+        { label:'Doses disponibles', value:this.num(doses, 0), note:'équivalent 5 cl de spiritueux' },
+        { label:'Marge moyenne carte', value:this.pc(avgMarge), note:'cible ' + this.num(pr.cible, 0) + ' %, plancher ' + this.num(pr.min, 0) + ' %' },
+        { label:'Seuils franchis', value:String(low.length), note:'références sous leur seuil d\u2019alerte' },
+        { label:'Fiches à la carte', value:String(st.cocktails.length), note:'recettes chiffrées et à jour' }
+      ],
+      alerts:low.map(x => ({ nom:x.nom, detail:x.four + ' · seuil ' + x.seuil, reste:this.stockOf(x) + ' en stock' })),
+      menuMargins:st.cocktails.map(x => {
+        const m = cocktailMarge(x);
+        return { nom:x.nom, line:this.eur(x.prix) + ' · ' + this.num(m, 0) + ' %', pct:Math.max(0, Math.min(100, Math.round(m))) + '%', ok:m >= pr.min, under:m < pr.min };
+      }),
+
+      query:st.query, onQuery:e => this.setState({ query:e.target.value }),
+      cat:st.cat,
+      catOptions:[{ value:'Tout', label:'Toutes catégories' }, ...st.categories.filter(x => x.id !== 'Consommable').map(x => ({ value:x.id, label:x.nom })), { value:'__untracked', label:'Non suivies' }],
+      onCat:v => this.setState({ cat:v }),
+      rows, rowsCount:filtered.length + ' références affichées',
+
+      p:product, marge:String(marge), margeLabel:this.num(marge, 0) + ' %',
+      onMarge:e => this.setState({ marge:parseFloat(e.target.value) }),
+      editProduct:() => this.setState({ modal:this.refModalFor(p) }),
+      removeProduct:() => askDeleteRef(p),
+
+      invRows, invValue:this.eur(invTotal), invProgress:invList.length + ' références comptées · zone bar arrière',
+      closeInventory:() => this.ask('Clôturer l\u2019inventaire ?', 'Les quantités comptées remplacent le stock théorique et la valeur de la cave est figée à cette date.', 'Clôturer',
+        () => this.setState({ confirm:null, screen:'dash' })),
+
+      cocktails:st.cocktails.map(x => ({
+        nom:x.nom, meta:this.eur(x.prix) + ' · marge ' + this.num(cocktailMarge(x), 0) + ' %',
+        active:c && x.id === c.id, idle:!c || x.id !== c.id,
+        go:this.set('cocktailId', x.id), remove:() => askDeleteCocktail(x)
+      })),
+      cocktailCount:st.cocktails.length + ' fiches',
+      addCocktail:() => {
+        const id = 'fiche' + Date.now();
+        this.setState(s => ({ cocktailId:id, cocktails:[...s.cocktails, { id, nom:'Nouvelle fiche', famille:s.familles[0] || 'Signature', verre:s.verres[0] || 'Coupe', prix:14, desc:'', ings:[{ ref:'gin', cl:4 }, { ref:'service', cl:0 }] }] }));
+      },
+      removeCocktail:() => { if (c) askDeleteCocktail(c); },
+      c:c ? { nom:c.nom, famille:c.famille, verre:c.verre, desc:c.desc } : { nom:'', famille:'', verre:'', desc:'' },
+      familleOptions:st.familles.map(x => ({ value:x, label:x })),
+      verreOptions:st.verres.map(x => ({ value:x, label:x })),
+      onCocktailNom:e => { const v = e.target.value; this.patchCocktail(x => { x.nom = v; return x; }); },
+      onCocktailFamille:v => this.patchCocktail(x => { x.famille = v; return x; }),
+      onCocktailVerre:v => this.patchCocktail(x => { x.verre = v; return x; }),
+      onCocktailDesc:e => { const v = e.target.value; this.patchCocktail(x => { x.desc = v; return x; }); },
+      ingOptions:[
+        ...this.catalog.filter(x => this.tracked(x)).map(x => ({ value:x.id, label:x.nom })),
+        ...untracked.map(x => ({ value:x.id, label:x.nom + ' · ' + (x.unite || 'pièce') })),
+        ...this.catalog.filter(x => x.cat === 'Consommable').map(x => ({ value:x.id, label:x.nom })),
+        { value:'__new', label:'+ Créer une référence suivie…' },
+        { value:'__newuntracked', label:'+ Créer une garniture non suivie…' }
+      ],
+      ings:c ? c.ings.map((i, idx) => {
+        const x = this.find(i.ref);
+        const untr = x && x.suivi === false;
+        const conso = x && x.cat === 'Consommable';
+        const step = untr ? 1 : 0.5;
+        return {
+          ref:i.ref,
+          dose:conso ? 'au service' : untr ? this.num(i.cl, 0) + ' ' + (x.unite || 'pièce') : this.num(i.cl, 1) + ' cl',
+          cout:this.eur(this.ingCost(i)),
+          onRef:v => {
+            if (v === '__new' || v === '__newuntracked') { this.setState({ modal:this.blankModal(v === '__new', idx) }); return; }
+            this.patchCocktail(y => { y.ings = y.ings.map((z, k) => k === idx ? { ...z, ref:v } : z); return y; });
+          },
+          minus:() => this.patchCocktail(y => { y.ings = y.ings.map((z, k) => k === idx ? { ...z, cl:Math.max(0, Math.round((z.cl - step) * 10) / 10) } : z); return y; }),
+          plus:() => this.patchCocktail(y => { y.ings = y.ings.map((z, k) => k === idx ? { ...z, cl:Math.round((z.cl + step) * 10) / 10 } : z); return y; }),
+          remove:() => this.patchCocktail(y => { y.ings = y.ings.filter((z, k) => k !== idx); return y; })
+        };
+      }) : [],
+      addIng:() => this.patchCocktail(y => { y.ings = [...y.ings, { ref:'gin', cl:2 }]; return y; }),
+      openNewRefForIng:() => this.setState({ modal:this.blankModal(true, 'append') }),
+      openNewUntrackedForIng:() => this.setState({ modal:this.blankModal(false, 'append') }),
+      recipeCost:this.eur(rCost),
+      menuPrice:c ? this.eur(c.prix) : '—', price:String(c ? c.prix : 14),
+      menuOk:menuMarge >= pr.min, menuUnder:menuMarge < pr.min,
+      onPrice:e => { const v = parseFloat(e.target.value); this.patchCocktail(x => { x.prix = v; return x; }); },
+      margin:[
+        { k:'Prix HT', v:this.eur(menuHT) },
+        { k:'Coût matière', v:this.eur(rCost) + ' · ' + this.pc(menuHT > 0 ? rCost / menuHT * 100 : 0) },
+        { k:'Marge brute', v:this.eur(menuHT - rCost) + ' · ' + this.pc(menuMarge) },
+        { k:'TVA collectée', v:this.eur((c ? c.prix : 0) - menuHT) }
+      ],
+      suggested:this.eur(suggested),
+      applySuggested:() => this.patchCocktail(x => { x.prix = suggested; return x; }),
+      feasible:limiting ? this.num(limiting.n, 0) + ' services' : '—',
+      feasibleNote:limiting ? 'Facteur limitant : ' + limiting.nom + ', sur ' + (st.site === 'tous' ? 'tous les lieux' : st.site) + '.' : 'Ajoutez un ingrédient suivi pour estimer la faisabilité.',
+
+      seuilRows:trackedRefs.map(x => {
+        const fa = this.field('achat_' + x.id, this.num(x.achat, 2), v => this.setState(s => ({ achats:{ ...s.achats, [x.id]:v } })));
+        const fm = this.field('marge_' + x.id, this.num(this.margeOf(x), 0), v => this.setState(s => ({ margesRef:{ ...s.margesRef, [x.id]:v } })));
+        return {
+          nom:x.nom, sub:x.marque + ' · ' + x.four, stock:this.stockOf(x) + unit(x), seuil:x.seuil,
+          achat:fa.v, onAchat:fa.on, blurAchat:fa.blur,
+          marge:fm.v, onMarge:fm.on, blurMarge:fm.blur,
+          low:this.stockOf(x) <= x.seuil, fine:this.stockOf(x) > x.seuil,
+          minus:() => this.setState(s => ({ seuils:{ ...s.seuils, [x.id]:Math.max(0, x.seuil - 1) } })),
+          plus:() => this.setState(s => ({ seuils:{ ...s.seuils, [x.id]:x.seuil + 1 } })),
+          edit:() => this.setState({ modal:this.refModalFor(x) }),
+          remove:() => askDeleteRef(x)
+        };
+      }),
+      seuilCount:trackedRefs.length + ' références · ' + low.length + ' sous seuil',
+      untrackedRows:untracked.map(x => {
+        const used = st.cocktails.filter(y => y.ings.some(i => i.ref === x.id)).length;
+        return {
+          nom:x.nom, sub:x.marque, unite:x.unite || 'pièce', cout:this.eur(x.achat),
+          usage:used + (used > 1 ? ' fiches' : ' fiche'),
+          edit:() => this.setState({ modal:this.refModalFor(x) }),
+          remove:() => askDeleteRef(x)
+        };
+      }),
+      openCreateRef:() => this.setState({ modal:this.blankModal(true, null) }),
+      openCreateUntracked:() => this.setState({ modal:this.blankModal(false, null) }),
+
+      impIdle:st.imp.step === 'idle', impMapping:st.imp.step === 'mapping', impDone:st.imp.step === 'done',
+      impName:st.imp.name,
+      onFile:e => {
+        const file = e.target.files && e.target.files[0];
+        this.setState(s => ({ imp:{ ...s.imp, step:'mapping', name:file ? file.name : 'classeur.xlsx' } }));
+      },
+      impFields:[
+        { value:'nom', label:'Nom de la référence' }, { value:'marque', label:'Marque / domaine' },
+        { value:'categorie', label:'Catégorie' }, { value:'volume', label:'Volume (cl)' },
+        { value:'degre', label:'Degré (% vol.)' }, { value:'achat', label:'Prix d\u2019achat HT' },
+        { value:'stock', label:'Quantité en stock' }, { value:'fournisseur', label:'Fournisseur' },
+        { value:'ignore', label:'Ignorer cette colonne' }
+      ],
+      impMap:['A', 'B', 'C', 'D', 'E'].map(col => ({
+        col:'Colonne ' + col, value:st.imp.map[col],
+        on:v => this.setState(s => ({ imp:{ ...s.imp, map:{ ...s.imp.map, [col]:v } } }))
+      })),
+      impCount:'126 lignes lues',
+      impPreview:[
+        { nom:'Gin London Dry', v:'70 cl · 18,40 € · 6 bt' },
+        { nom:'Rhum agricole blanc 55°', v:'70 cl · 24,90 € · 8 bt' },
+        { nom:'Mezcal espadín', v:'70 cl · 31,00 € · 2 bt' },
+        { nom:'Tonic indien 20 cl', v:'20 cl · 0,62 € · 48 u.' }
+      ],
+      impCancel:() => this.setState(s => ({ imp:{ ...s.imp, step:'idle', name:'' } })),
+      impApply:() => this.setState(s => ({ imp:{ ...s.imp, step:'done' } })),
+      impDoneNote:'118 références mises à jour, 8 créées. Prix d\u2019achat et quantités repris dans la cave, prix conseillés recalculés.',
+      impHistory:[
+        { k:'inventaire-juillet.xlsx', v:'lundi · 126 lignes' },
+        { k:'tarif-dugas-2026.xlsx', v:'12/07 · 64 lignes' },
+        { k:'cave-vins.csv', v:'02/07 · 39 lignes' }
+      ],
+
+      params:[
+        { k:'Droit d\u2019accise · spiritueux', n:'au hL d\u2019alcool pur', v:this.num(st.rates.accise), unit:'€/hL AP', key:'accise' },
+        { k:'Cotisation sécurité sociale', n:'boissons de plus de 18 % vol.', v:this.num(st.rates.ss), unit:'€/hL AP', key:'ss' },
+        { k:'Vin tranquille', n:'au hL de produit fini', v:this.num(st.rates.vin, 2), unit:'€/hL', key:'vin' },
+        { k:'Vin mousseux', n:'champagnes et effervescents', v:this.num(st.rates.mousseux, 2), unit:'€/hL', key:'mousseux' },
+        { k:'Bière', n:'au hL et par degré alcoolique', v:this.num(st.rates.biere, 2), unit:'€/hL/degré', key:'biere' }
+      ].map(x => {
+        const fl = this.field('rate_' + x.key, x.v, v => this.setState(s => ({ rates:{ ...s.rates, [x.key]:v } })));
+        return { k:x.k, n:x.n, unit:x.unit, v:fl.v, on:fl.on, blur:fl.blur };
+      }),
+      baremeExamples:trackedRefs.slice(0, 5).map(x => {
+        const fx = this.fiscal(x), t = fx.accise + fx.ss;
+        return { k:x.nom, n:fx.dose + ' cl à ' + this.num(x.abv, 1) + ' % vol.', taxe:this.eur(t, 3), part:this.pc(t / this.coutDose(x) * 100) };
+      }),
+
+      pricingFields:[
+        { k:'Marge cible moyenne', unit:'%', n:'appliquée par défaut à toutes les catégories', v:this.num(pr.cible, 0), key:'cible' },
+        { k:'Marge plancher', unit:'%', n:'sous ce seuil, le prix passe en alerte', v:this.num(pr.min, 0), key:'min' },
+        { k:'Arrondi commercial', unit:'€', n:'pas d\u2019arrondi du prix TTC affiché à la carte', v:this.num(pr.arrondi, 2), key:'arrondi' }
+      ].map(x => {
+        const fl = this.field('pr_' + x.key, x.v, v => this.setState(s => ({ pricing:{ ...s.pricing, [x.key]:v } })));
+        return { k:x.k, n:x.n, unit:x.unit, v:fl.v, on:fl.on, blur:fl.blur };
+      }),
+      regimeOptions:[
+        { value:'spiritueux', label:'Spiritueux · accise hL AP' },
+        { value:'vin', label:'Vin tranquille' },
+        { value:'mousseux', label:'Vin mousseux' },
+        { value:'biere', label:'Bière · au degré' },
+        { value:'intermediaire', label:'Produit intermédiaire' },
+        { value:'aucun', label:'Sans alcool · non soumis' }
+      ],
+      tvaOptions:[{ value:'20', label:'20 %' }, { value:'10', label:'10 %' }, { value:'5.5', label:'5,5 %' }],
+      categoryRows:st.categories.map((x, idx) => {
+        const patch = obj => this.setState(s => ({ categories:s.categories.map((y, i) => i === idx ? { ...y, ...obj } : y) }));
+        const fd = this.field('cdose_' + x.id, this.num(x.dose, 0), v => patch({ dose:v }));
+        const fm = this.field('cmarge_' + x.id, this.num(x.marge, 0), v => patch({ marge:v }));
+        return {
+          nom:x.nom, regime:x.regime, tva:String(x.tva),
+          dose:fd.v, onDose:fd.on, blurDose:fd.blur,
+          marge:fm.v, onMarge:fm.on, blurMarge:fm.blur,
+          onNom:e => patch({ nom:e.target.value }),
+          onRegime:v => patch({ regime:v }),
+          onTva:v => patch({ tva:this.parse(v) }),
+          remove:() => this.ask('Supprimer la catégorie ' + x.nom + ' ?', 'Les références rattachées basculeront sur la première catégorie.', 'Supprimer',
+            () => this.setState(s => ({ categories:s.categories.filter((y, i) => i !== idx), confirm:null })))
+        };
+      }),
+      addCategory:() => this.setState(s => ({ categories:[...s.categories, { id:'cat' + Date.now(), nom:'Nouvelle catégorie', dose:5, regime:'aucun', marge:s.pricing.cible, tva:20 }] })),
+
+      simpleLists:[
+        { key:'lieux', title:'Lieux de stockage', note:'Chaque lieu apparaît dans le sélecteur en haut de l\u2019écran.' },
+        { key:'fournisseurs', title:'Fournisseurs', note:'Proposés à la création d\u2019une référence et à l\u2019import.' },
+        { key:'familles', title:'Familles de carte', note:'Classement des fiches cocktails.' },
+        { key:'verres', title:'Verrerie', note:'Proposée sur chaque fiche cocktail.' },
+        { key:'unites', title:'Unités des non suivies', note:'Branche, trait, zeste, pincée… pour les garnitures.' }
+      ].map(l => ({
+        title:l.title, note:l.note,
+        items:st[l.key].map((v, i) => ({
+          v, on:e => { const val = e.target.value; this.setState(s => ({ [l.key]:s[l.key].map((x, k) => k === i ? val : x) })); },
+          remove:() => this.setState(s => ({ [l.key]:s[l.key].filter((x, k) => k !== i) }))
+        })),
+        add:() => this.setState(s => ({ [l.key]:[...s[l.key], 'Nouveau'] }))
+      })),
+
+      modalOpen:!!st.modal,
+      modalTitle:md.mode === 'edit' ? 'Éditer la référence' : md.suivi ? 'Nouvelle référence suivie' : 'Nouvelle garniture non suivie',
+      modalCta:md.mode === 'edit' ? 'Enregistrer' : 'Créer',
+      modalTracked:!!md.suivi, modalUntracked:st.modal ? !md.suivi : false,
+      modalCat:md.cat, modalFour:md.four,
+      catCreateOptions:catOpts,
+      fournisseurOptions:st.fournisseurs.map(x => ({ value:x, label:x })),
+      onModalCat:v => this.setState(s => ({ modal:{ ...s.modal, cat:v } })),
+      onModalFour:v => this.setState(s => ({ modal:{ ...s.modal, four:v } })),
+      setTracked:() => this.setState(s => ({ modal:{ ...s.modal, suivi:true, cat:catOpts[0] ? catOpts[0].value : 'Spiritueux' } })),
+      setUntracked:() => this.setState(s => ({ modal:{ ...s.modal, suivi:false, cat:'Garniture' } })),
+      modalFields:modalFields.map(x => ({
+        k:x.k, ph:x.ph, v:md[x.key] ?? '',
+        on:e => { const v = e.target.value; this.setState(s => ({ modal:{ ...s.modal, [x.key]:v } })); }
+      })),
+      modalHint:md.mode === 'edit'
+        ? 'Les modifications se répercutent sur les fiches cocktails et les prix conseillés.'
+        : md.suivi
+          ? (md.target ? 'Créée avec un stock à 0 sur chaque lieu, et ajoutée à la fiche en cours.' : 'Créée avec un stock à 0 sur chaque lieu.')
+          : 'Aucun stock, aucun seuil : la garniture sert uniquement au chiffrage des fiches.',
+      closeModal:() => this.setState({ modal:null }),
+      saveModal:() => {
+        const n = st.modal; if (!n) return;
+        if (n.mode === 'edit') {
+          const patch = {
+            nom:n.nom, marque:n.marque, four:n.four, achat:this.parse(n.achat),
+            suivi:n.suivi, cat:n.suivi ? n.cat : 'Garniture'
+          };
+          if (n.suivi) { patch.vol = this.parse(n.vol) || 70; patch.abv = this.parse(n.abv); patch.seuil = this.parse(n.seuil); }
+          else { patch.unite = n.unite || 'pièce'; patch.vol = 1; patch.abv = 0; patch.seuil = 0; }
+          this.setState(s => {
+            const achats = { ...s.achats }; delete achats[n.id];
+            const seuils = { ...s.seuils }; delete seuils[n.id];
+            return { edits:{ ...s.edits, [n.id]:{ ...(s.edits[n.id] || {}), ...patch } }, achats, seuils, modal:null };
+          });
+          return;
+        }
+        const id = 'ref' + Date.now();
+        const stocks = {};
+        if (n.suivi) st.lieux.forEach(l => { stocks[l] = 0; });
+        const ref = n.suivi
+          ? { id, nom:n.nom || 'Nouvelle référence', marque:n.marque || 'à compléter', cat:n.cat, abv:this.parse(n.abv), vol:this.parse(n.vol) || 70, achat:this.parse(n.achat), stocks, seuil:this.parse(n.seuil) || 1, four:n.four }
+          : { id, nom:n.nom || 'Nouvelle garniture', marque:n.marque || 'non suivie', cat:'Garniture', abv:0, vol:1, achat:this.parse(n.achat), stocks:{}, seuil:0, four:n.four, suivi:false, unite:n.unite || 'pièce' };
+        this.setState(s => {
+          const next = { customRefs:[...s.customRefs, ref], modal:null };
+          if (n.target === 'append' || typeof n.target === 'number') {
+            next.cocktails = s.cocktails.map(x => {
+              if (x.id !== s.cocktailId) return x;
+              const ings = typeof n.target === 'number'
+                ? x.ings.map((z, k) => k === n.target ? { ...z, ref:id } : z)
+                : [...x.ings, { ref:id, cl:n.suivi ? 2 : 1 }];
+              return { ...x, ings };
+            });
+          }
+          return next;
+        });
+      },
+
+      confirmOpen:!!st.confirm,
+      confirmTitle:st.confirm ? st.confirm.title : '',
+      confirmBody:st.confirm ? st.confirm.body : '',
+      confirmLabel:st.confirm ? st.confirm.label : '',
+      confirmCancel:() => this.setState({ confirm:null }),
+      confirmOk:() => { if (st.confirm && st.confirm.onOk) st.confirm.onOk(); else this.setState({ confirm:null }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
