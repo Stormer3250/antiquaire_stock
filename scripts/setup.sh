@@ -31,6 +31,7 @@ if [[ "$(uname)" != "Darwin" ]]; then
 fi
 
 # 4. service launchd : démarre au login, redémarre en cas de crash
+mkdir -p "$HOME/Library/LaunchAgents"
 sed -e "s|__UV__|$UV|g" -e "s|__REPO__|$REPO|g" -e "s|__DATA__|$DATA|g" \
   "$REPO/scripts/com.antiquaire.stock.plist.tmpl" > "$PLIST_DST"
 launchctl bootout "gui/$(id -u)" "$PLIST_DST" 2>/dev/null || true
