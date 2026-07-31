@@ -139,6 +139,40 @@ def test_apply_requires_nom_mapping(client):
     assert r.status_code == 422
 
 
+def test_template_downloads_and_roundtrips(client):
+    """Les modèles se téléchargent et repassent tels quels dans l'import."""
+    x = client.get("/api/import/template?format=xlsx")
+    assert x.status_code == 200
+    assert "modele-antiquaire.xlsx" in x.headers["content-disposition"]
+    wb = openpyxl.load_workbook(io.BytesIO(x.content))
+    assert [c.value for c in wb.active[1]][0] == "Nom"
+
+    c = client.get("/api/import/template?format=csv")
+    assert c.status_code == 200 and "Nom;Marque" in c.text
+
+    # le modèle rempli s'importe : en-têtes reconnus par inspect, application ok
+    ins = client.post(
+        "/api/import/inspect",
+        files={"file": ("modele-antiquaire.xlsx", x.content, "application/octet-stream")},
+    ).json()
+    headers = [col["header"] for col in ins["columns"]]
+    assert headers[0] == "Nom" and "Quantité en stock" in headers
+    mapping = {
+        "0": "nom",
+        "1": "marque",
+        "3": "volume",
+        "4": "degre",
+        "5": "achat",
+        "6": "stock",
+        "7": "fournisseur",
+    }
+    r = client.post(
+        "/api/import/apply",
+        json={"token": ins["token"], "mapping": mapping, "location_id": RESERVE, "categorie_id": 1},
+    ).json()
+    assert r["created"] == 2 and r["errors"] == []
+
+
 def test_apply_unknown_token(client):
     r = client.post(
         "/api/import/apply",

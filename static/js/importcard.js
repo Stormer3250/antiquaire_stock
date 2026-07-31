@@ -100,6 +100,11 @@ function cardHtml() {
       Choisir un fichier
       <input type="file" accept=".xlsx,.xls,.csv" data-imp-file style="display:none;">
     </label>
+    <div class="num" style="font-size:11px; color:var(--mut2);">
+      Modèle prêt à remplir :
+      <a href="/api/import/template?format=xlsx" download>.xlsx</a> ·
+      <a href="/api/import/template?format=csv" download>.csv</a>
+    </div>
   </div>`;
 }
 
