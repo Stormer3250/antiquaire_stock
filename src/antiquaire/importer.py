@@ -2,6 +2,7 @@
 
 import csv
 import io
+import json
 import time
 import unicodedata
 import uuid
@@ -75,11 +76,29 @@ def inspect_file(filename: str, data: bytes) -> dict:
     rows = _read_rows(filename, data)
     if not rows:
         raise HTTPException(422, "fichier vide ou illisible")
-    # ponytail: en-tête = 1re ligne sans aucun nombre alors que la suite en contient
-    has_header = (
-        len(rows) > 1
-        and not any(_is_number(c) for c in rows[0])
-        and any(_is_number(c) for r in rows[1:3] for c in r)
+    # en-tête = 1re ligne sans nombre alors que la suite en contient,
+    # OU 1re ligne dont ≥2 cellules ressemblent à des noms de champs connus
+    known = (
+        "nom",
+        "marque",
+        "categorie",
+        "volume",
+        "degre",
+        "achat",
+        "prix",
+        "stock",
+        "quantite",
+        "fournisseur",
+        "cond",
+        "tva",
+    )
+    keyword_hits = sum(1 for c in rows[0] if any(k in normalize(c) for k in known))
+    has_header = len(rows) > 1 and (
+        (
+            not any(_is_number(c) for c in rows[0])
+            and any(_is_number(c) for r in rows[1:3] for c in r)
+        )
+        or keyword_hits >= 2
     )
     header = rows[0] if has_header else []
     body = rows[1:] if has_header else rows
@@ -113,7 +132,14 @@ def inspect_file(filename: str, data: bytes) -> dict:
     }
 
 
-def apply_import(conn, token: str, mapping: dict, location_id: int, categorie_id: int) -> dict:
+def apply_import(
+    conn,
+    token: str,
+    mapping: dict,
+    location_id: int,
+    categorie_id: int,
+    create_categories: bool = False,
+) -> dict:
     entry = _cache.pop(token, None)
     if entry is None or time.time() - entry["ts"] > TOKEN_TTL:
         raise HTTPException(410, "import expiré, redéposez le fichier")
@@ -135,6 +161,7 @@ def apply_import(conn, token: str, mapping: dict, location_id: int, categorie_id
     created = updated = 0
     errors: list[str] = []
     comptages: list[dict] = []
+    seen_fournisseurs: list[str] = []
     try:
         for line_no, row in enumerate(entry["rows"], start=entry["offset"]):
             values = {field: row[col] for col, field in fields_by_col.items() if col < len(row)}
@@ -157,7 +184,16 @@ def apply_import(conn, token: str, mapping: dict, location_id: int, categorie_id
                 except (ValueError, TypeError):
                     bad = f"ligne {line_no}: stock illisible « {values['stock']} »"
             if "categorie" in values and str(values["categorie"]).strip():
-                cat_id = cats.get(normalize(values["categorie"]))
+                cat_nom = str(values["categorie"]).strip()
+                cat_id = cats.get(normalize(cat_nom))
+                if cat_id is None and create_categories:
+                    cur = conn.execute(
+                        "INSERT INTO categories (nom, position) VALUES (?,"
+                        " (SELECT COALESCE(MAX(position), 0) + 1 FROM categories))",
+                        (cat_nom,),
+                    )
+                    cat_id = cur.lastrowid
+                    cats[normalize(cat_nom)] = cat_id
                 if cat_id is None:
                     bad = f"ligne {line_no}: catégorie inconnue « {values['categorie']} »"
                 else:
@@ -168,6 +204,8 @@ def apply_import(conn, token: str, mapping: dict, location_id: int, categorie_id
             for field, col_name in texts.items():
                 if field in values and str(values[field]).strip():
                     patch[col_name] = str(values[field]).strip()
+            if patch.get("fournisseur"):
+                seen_fournisseurs.append(patch["fournisseur"])
 
             ref_id = existing.get(normalize(nom))
             if ref_id is None:
@@ -211,6 +249,17 @@ def apply_import(conn, token: str, mapping: dict, location_id: int, categorie_id
                     stock.now(),
                 ),
             )
+        # les fournisseurs jamais vus rejoignent la liste de Configuration
+        if seen_fournisseurs:
+            lists = json.loads(
+                conn.execute("SELECT value FROM settings WHERE key = 'lists'").fetchone()[0]
+            )
+            known = {normalize(f) for f in lists["fournisseurs"]}
+            for f in seen_fournisseurs:
+                if normalize(f) not in known:
+                    lists["fournisseurs"].append(f)
+                    known.add(normalize(f))
+            conn.execute("UPDATE settings SET value = ? WHERE key = 'lists'", (json.dumps(lists),))
         conn.execute(
             "INSERT INTO imports (filename, line_count, created_count, updated_count, created_at)"
             " VALUES (?, ?, ?, ?, ?)",
@@ -287,7 +336,12 @@ def import_apply(conn: Conn, body: dict):
         if not body.get(key):
             raise HTTPException(422, f"{key} obligatoire")
     return apply_import(
-        conn, body["token"], body["mapping"], body["location_id"], body["categorie_id"]
+        conn,
+        body["token"],
+        body["mapping"],
+        body["location_id"],
+        body["categorie_id"],
+        create_categories=bool(body.get("create_categories")),
     )
 
 
