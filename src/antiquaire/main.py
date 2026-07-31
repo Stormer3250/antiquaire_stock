@@ -27,6 +27,9 @@ def create_app(db_path: str | Path | None = None, with_scheduler: bool | None = 
     app.include_router(router, prefix="/api")
     app.include_router(admin_router, prefix="/api")
     app.include_router(import_router, prefix="/api")
+    from antiquaire.backups import router as backups_router
+
+    app.include_router(backups_router, prefix="/api")
     if STATIC_DIR.is_dir():
         app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
     if with_scheduler:

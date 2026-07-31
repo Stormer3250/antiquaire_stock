@@ -305,4 +305,12 @@ def movements_list(conn: Conn, ref: int | None = None, lieu: str | None = None, 
 @router.get("/health")
 def health(conn: Conn):
     db_ok = conn.execute("SELECT count(*) FROM settings").fetchone()[0] >= 3
-    return {"ok": True, "db_ok": db_ok, "last_backup_at": None}
+    last = None
+    snaps = sorted((db.data_dir() / "backups").glob("stock-*.db"), key=lambda p: p.stat().st_mtime)
+    if snaps:
+        import datetime
+
+        last = datetime.datetime.fromtimestamp(snaps[-1].stat().st_mtime).isoformat(
+            timespec="seconds"
+        )
+    return {"ok": True, "db_ok": db_ok, "last_backup_at": last}
