@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from antiquaire import db
 from antiquaire.api import router
 from antiquaire.api_admin import router as admin_router
+from antiquaire.importer import router as import_router
 
 STATIC_DIR = Path(__file__).parent.parent.parent / "static"
 
@@ -25,6 +26,7 @@ def create_app(db_path: str | Path | None = None, with_scheduler: bool | None = 
     app.state.db_path = Path(db_path)
     app.include_router(router, prefix="/api")
     app.include_router(admin_router, prefix="/api")
+    app.include_router(import_router, prefix="/api")
     if STATIC_DIR.is_dir():
         app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
     if with_scheduler:
