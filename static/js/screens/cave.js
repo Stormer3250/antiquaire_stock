@@ -4,24 +4,10 @@ import { apiGet, apiSend } from '../api.js';
 import { esc, eur, num, parseNum, confirmModal } from '../ui.js';
 import { S, refresh, lieuQuery, fmtStock } from '../app.js';
 import { openRefModal } from '../refmodal.js';
+import { mountImportCard } from '../importcard.js';
 
 const GRID = 'grid-template-columns:2fr .7fr 1fr 1fr 1fr .8fr .8fr 66px;';
 const UGRID = 'grid-template-columns:2fr 1fr 1fr 1fr 66px;';
-
-// état de l'import en cours (survit aux re-rendus de l'écran)
-const imp = { step: 'idle', data: null, mapping: {}, lieu: null, cat: null, result: null };
-
-const IMP_FIELDS = [
-  { value: '', label: 'Ignorer cette colonne' },
-  { value: 'nom', label: 'Nom de la référence' },
-  { value: 'marque', label: 'Marque / domaine' },
-  { value: 'categorie', label: 'Catégorie' },
-  { value: 'volume', label: 'Volume (cl)' },
-  { value: 'degre', label: 'Degré (% vol.)' },
-  { value: 'achat', label: 'Prix d’achat HT' },
-  { value: 'stock', label: 'Quantité en stock' },
-  { value: 'fournisseur', label: 'Fournisseur' },
-];
 
 export async function render(el) {
   const [stockData, importsData] = await Promise.all([
@@ -82,73 +68,6 @@ export async function render(el) {
     </div>`;
     }).join('');
 
-  // ---------- carte import ----------
-
-  function importCard() {
-    if (imp.step === 'mapping' && imp.data) {
-      const d = imp.data;
-      return `
-      <div class="row spread" style="padding:16px 18px 0;">
-        <div style="font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(d.filename)}</div>
-        <button class="btn muted" data-imp-cancel style="padding:4px 9px; font-size:10px;">Annuler</button>
-      </div>
-      <div style="padding:14px 18px; display:flex; flex-direction:column; gap:9px;">
-        <div class="mono-label">Correspondance des colonnes</div>
-        ${d.columns.map((col) => `
-        <div style="display:grid; grid-template-columns:1fr 1.1fr; gap:9px; align-items:center;">
-          <div class="num" style="font-size:11.5px; color:var(--mut);" title="${esc(col.sample)}">
-            Colonne ${col.letter}${col.header ? ' · ' + esc(col.header) : ''}</div>
-          <select class="input" data-imp-map="${col.key}">
-            ${IMP_FIELDS.map((f) => `<option value="${f.value}" ${imp.mapping[col.key] === f.value ? 'selected' : ''}>${esc(f.label)}</option>`).join('')}
-          </select>
-        </div>`).join('')}
-        <div class="row" style="gap:9px; margin-top:5px;">
-          <div class="field grow"><div class="mono-label">Stock compté sur</div>
-            <select class="input" data-imp-lieu>
-              ${S.meta.locations.map((l) => `<option value="${l.id}" ${imp.lieu === l.id ? 'selected' : ''}>${esc(l.nom)}</option>`).join('')}
-            </select></div>
-          <div class="field grow"><div class="mono-label">Catégorie des nouveautés</div>
-            <select class="input" data-imp-cat>
-              ${S.meta.categories.filter((c) => c.nom !== 'Consommable').map((c) => `<option value="${c.id}" ${imp.cat === c.id ? 'selected' : ''}>${esc(c.nom)}</option>`).join('')}
-            </select></div>
-        </div>
-        <div style="border-top:1px solid var(--line2); padding-top:12px; display:flex; flex-direction:column; gap:7px;">
-          <div class="mono-label">Aperçu · ${d.row_count} ligne${d.row_count > 1 ? 's' : ''} lue${d.row_count > 1 ? 's' : ''}</div>
-          ${d.preview.map((row) => `
-          <div class="row spread" style="font-size:12.5px; gap:10px;">
-            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(row[0] ?? '')}</span>
-            <span class="num" style="color:var(--mut2); flex:0 0 auto;">${esc(row.slice(1, 4).filter(Boolean).join(' · '))}</span>
-          </div>`).join('')}
-        </div>
-        <button class="btn-solid" data-imp-apply style="margin-top:6px;">Valider l’import</button>
-      </div>`;
-    }
-    if (imp.step === 'done' && imp.result) {
-      const r = imp.result;
-      return `
-      <div style="padding:22px 18px; display:flex; flex-direction:column; gap:11px;">
-        <div style="font-family:var(--serif); font-size:22px;" class="accent">Import appliqué</div>
-        <div style="font-size:13px; color:var(--mut);" class="pretty">
-          ${r.updated} référence${r.updated > 1 ? 's' : ''} mise${r.updated > 1 ? 's' : ''} à jour,
-          ${r.created} créée${r.created > 1 ? 's' : ''}. Prix d’achat et quantités repris,
-          prix conseillés recalculés.</div>
-        ${r.errors.length
-          ? `<div style="font-size:12px; color:var(--red2);" class="pretty">${r.errors.length} ligne(s) ignorée(s) :<br>${r.errors.slice(0, 6).map(esc).join('<br>')}</div>`
-          : ''}
-        <button class="btn" data-imp-reset>Nouvel import</button>
-      </div>`;
-    }
-    return `
-    <div style="padding:22px 18px; display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center;">
-      <div style="font-size:13px; color:var(--mut);" class="pretty">Déposez un .xlsx ou .csv pour
-        mettre à jour les références et les quantités en stock.</div>
-      <label class="btn-solid" style="cursor:pointer;">
-        Choisir un fichier
-        <input type="file" accept=".xlsx,.xls,.csv" data-imp-file style="display:none;">
-      </label>
-    </div>`;
-  }
-
   el.innerHTML = `
   <div style="display:grid; grid-template-columns:1fr 320px; gap:18px; align-items:start;">
     <div class="stack" style="gap:18px;">
@@ -186,7 +105,7 @@ export async function render(el) {
       <div class="panel">
         <div style="padding:15px 18px; border-bottom:1px solid var(--line);" class="serif-title">
           Mise à jour par fichier</div>
-        <div data-import-card>${importCard()}</div>
+        <div data-import-card></div>
       </div>
       <div class="panel" style="padding:18px; display:flex; flex-direction:column; gap:10px;">
         <div class="mono-label" style="color:var(--mut2);">Historique des imports</div>
@@ -256,71 +175,7 @@ export async function render(el) {
     openRefModal({ suivi: false })
   );
 
-  // ---------- liaisons import ----------
+  // ---------- carte import (module partagé) ----------
 
-  const card = el.querySelector('[data-import-card]');
-
-  function bindImportCard() {
-    const file = card.querySelector('[data-imp-file]');
-    if (file) {
-      file.addEventListener('change', async () => {
-        if (!file.files.length) return;
-        const fd = new FormData();
-        fd.append('file', file.files[0]);
-        try {
-          const data = await apiSend('POST', '/api/import/inspect', fd);
-          imp.step = 'mapping';
-          imp.data = data;
-          imp.lieu = S.lieu !== 'tous' ? S.lieu : S.meta.locations[0]?.id;
-          imp.cat = S.meta.categories[0]?.id;
-          // pré-remplissage : en-têtes reconnues
-          imp.mapping = {};
-          const guess = { nom: 'nom', marque: 'marque', categorie: 'categorie', volume: 'volume', 'degre': 'degre', 'degré': 'degre', achat: 'achat', prix: 'achat', stock: 'stock', 'quantite': 'stock', 'quantité': 'stock', fournisseur: 'fournisseur' };
-          data.columns.forEach((col) => {
-            const h = col.header.toLowerCase();
-            imp.mapping[col.key] = Object.keys(guess).find((g) => h.includes(g)) ? guess[Object.keys(guess).find((g) => h.includes(g))] : '';
-          });
-          repaint();
-        } catch (e) {
-          alert(`Fichier illisible : ${e.message}`);
-        }
-      });
-    }
-    card.querySelectorAll('[data-imp-map]').forEach((s) =>
-      s.addEventListener('change', () => { imp.mapping[s.dataset.impMap] = s.value; })
-    );
-    const lieuSel = card.querySelector('[data-imp-lieu]');
-    if (lieuSel) lieuSel.addEventListener('change', () => { imp.lieu = Number(lieuSel.value); });
-    const catSel = card.querySelector('[data-imp-cat]');
-    if (catSel) catSel.addEventListener('change', () => { imp.cat = Number(catSel.value); });
-    const cancel = card.querySelector('[data-imp-cancel]');
-    if (cancel) cancel.addEventListener('click', () => { imp.step = 'idle'; imp.data = null; repaint(); });
-    const reset = card.querySelector('[data-imp-reset]');
-    if (reset) reset.addEventListener('click', () => { imp.step = 'idle'; imp.result = null; render(el); });
-    const apply = card.querySelector('[data-imp-apply]');
-    if (apply) apply.addEventListener('click', async () => {
-      const mapping = Object.fromEntries(
-        Object.entries(imp.mapping).filter(([, v]) => v)
-      );
-      try {
-        imp.result = await apiSend('POST', '/api/import/apply', {
-          token: imp.data.token,
-          mapping,
-          location_id: imp.lieu,
-          categorie_id: imp.cat,
-        });
-        imp.step = 'done';
-        await render(el);
-      } catch (e) {
-        alert(`Import impossible : ${e.message}`);
-      }
-    });
-  }
-
-  function repaint() {
-    card.innerHTML = importCard();
-    bindImportCard();
-  }
-
-  bindImportCard();
+  mountImportCard(el.querySelector('[data-import-card]'), { onApplied: () => render(el) });
 }

@@ -1,9 +1,10 @@
 // Le grand registre : recherche, filtre catégorie, table des références.
 
 import { apiGet, apiSend } from '../api.js';
-import { esc, eur, num, pc, confirmModal } from '../ui.js';
+import { esc, eur, num, pc, confirmModal, openModal } from '../ui.js';
 import { S, go, refresh, lieuQuery, fmtStock } from '../app.js';
 import { openRefModal } from '../refmodal.js';
+import { mountImportCard } from '../importcard.js';
 
 const F = { query: '', cat: 'Tout' };  // filtres persistants pendant la session
 
@@ -24,7 +25,7 @@ export async function render(el) {
 
   const body = rows.length === 0
     ? `<div class="empty-note">Le registre est vide. Créez une référence avec « + Référence »
-        en haut, ou importez votre fichier Excel depuis <a href="#/cave">Cave &amp; seuils</a>.</div>`
+        en haut, ou cliquez « Importer un fichier » pour charger votre catalogue Excel.</div>`
     : filtered.length === 0
       ? `<div class="empty-note">Aucune référence ne correspond à cette recherche.</div>`
       : filtered.map((r) => `
@@ -60,6 +61,7 @@ export async function render(el) {
         <option value="__untracked" ${F.cat === '__untracked' ? 'selected' : ''}>Non suivies</option>
       </select>
     </div>
+    <button class="btn" data-import style="padding:11px 14px;">Importer un fichier</button>
   </div>
   <div class="panel">
     <div class="thead" style="${GRID}">
@@ -81,6 +83,15 @@ export async function render(el) {
   el.querySelector('[data-cat]').addEventListener('change', (e) => {
     F.cat = e.target.value;
     render(el);
+  });
+  el.querySelector('[data-import]').addEventListener('click', () => {
+    const modal = openModal(`
+      <div class="modal-head">
+        <div class="serif-title">Importer un fichier</div>
+        <button class="modal-x" aria-label="Fermer">×</button>
+      </div>
+      <div data-import-card></div>`, { width: 480 });
+    mountImportCard(modal.querySelector('[data-import-card]'), { onApplied: () => render(el) });
   });
   el.querySelectorAll('[data-open]').forEach((n) =>
     n.addEventListener('click', () => {

@@ -101,6 +101,28 @@ def test_apply_reports_bad_lines_but_applies_good_ones(client):
     assert "ligne 2" in r["errors"][0]
 
 
+def test_apply_references_only_writes_no_movements(client):
+    """Import catalogue seul (pas de colonne stock) : les quantités ne bougent pas."""
+    csv_refs = "nom;achat;fournisseur\nGin London Dry;18,40;Dugas\nMezcal espadín;31,00;Dugas\n"
+    ins = client.post(
+        "/api/import/inspect", files={"file": ("tarif.csv", csv_refs.encode(), "text/csv")}
+    ).json()
+    r = client.post(
+        "/api/import/apply",
+        json={
+            "token": ins["token"],
+            "mapping": {"0": "nom", "1": "achat", "2": "fournisseur"},
+            "location_id": RESERVE,
+            "categorie_id": 1,
+        },
+    ).json()
+    assert r["created"] == 2 and r["errors"] == []
+    assert client.get("/api/movements").json()["movements"] == []
+    rows = {x["nom"]: x for x in client.get("/api/stock").json()["refs"]}
+    assert rows["Mezcal espadín"]["achat_ht"] == 31.0
+    assert rows["Mezcal espadín"]["stock"] == 0
+
+
 def test_apply_requires_nom_mapping(client):
     ins = client.post(
         "/api/import/inspect", files={"file": ("x.csv", CSV.encode(), "text/csv")}
