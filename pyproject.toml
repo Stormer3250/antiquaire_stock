@@ -33,3 +33,4 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.ruff.lint.per-file-ignores]
 # Body(...) en valeur par défaut est l'idiome FastAPI
 "src/antiquaire/api.py" = ["B008"]
+"src/antiquaire/api_admin.py" = ["B008"]
