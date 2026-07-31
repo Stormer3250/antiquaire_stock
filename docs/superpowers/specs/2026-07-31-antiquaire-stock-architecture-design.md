@@ -45,7 +45,8 @@ No Docker, no PyInstaller, no Node, no external services.
    suggested price; row actions edit/delete; click-through to the fiche.
 3. **Fiche bouteille** — specs, fiscal breakdown per dose, margin slider (60–92),
    price waterfall (cost → HT → TVA → TTC rounded), scenarios plancher/cible/premium.
-   *Delta:* no photo placeholder — the block is removed.
+   *Deltas:* no photo placeholder — the block is removed; the price box gains a direct
+   input for the manual `prix_ttc` override (see §4).
 4. **Inventaire** — per-lieu session, partial counts allowed: pick the lieu, count what
    you see (¼/½/¾ open-bottle buttons + full-bottle steppers); *Clôturer* writes count
    movements **only for touched refs**. At most one open bottle per ref per lieu.
@@ -103,10 +104,17 @@ marge_reelle(ttc)   = (ht − cout_dose) / ht × 100
 ```
 
 - `marge` per ref defaults to its category's marge; overridable per ref.
-- **Fiscal:** each ref has `droits_inclus` (default **true** = wholesaler invoice already
-  carries the duty; fiscal panel is then analytics only). When **false** (bought duty-free
-  / en suspension), `taxes_dose = accise + cotisation_SS` computed per régime and degree
-  is **added to cout_dose** before margin.
+- **Manual price override:** each ref may store a `prix_ttc` (nullable). When set, it is
+  the displayed selling price — the fiche shows it in the price box and the margin
+  readouts flip to `marge_reelle(prix_ttc)` (red styling below the plancher, as designed).
+  When null, the price is the computed suggestion from the margin. The fiche gets a
+  direct price input next to the slider (slider moves marge → price recomputes; typing a
+  price sets the override); "Appliquer" on a scenario clears the override back to
+  computed. Same mental model as the cocktail price slider.
+- **Fiscal:** each ref has `droits_inclus` (default **false** = duty NOT in the typed
+  achat; `taxes_dose = accise + cotisation_SS` per régime and degree is **added to
+  cout_dose** before margin). Tick the box for refs whose invoice already embeds the
+  duty — the fiscal panel is then analytics only.
 - Tax math per dose (from the design, verified formulas): spiritueux → hL-of-pure-alcohol
   × rate; vin/mousseux/intermédiaire → hL of product × rate; bière → hL × rate × degree;
   cotisation SS only above 18° vol.
@@ -131,7 +139,8 @@ categories  (id, nom UNIQUE, dose_cl, regime, marge_pct, tva_pct, position, acti
              -- regime IN ('spiritueux','vin','mousseux','biere','intermediaire','aucun')
 refs        (id, nom, marque, categorie_id→categories, fournisseur TEXT,
              vol_cl, abv, achat_ht, marge_pct NULL,    -- NULL = category default
-             seuil, par_target, droits_inclus DEFAULT 1,
+             prix_ttc NULL,                            -- manual price override; NULL = computed
+             seuil, par_target, droits_inclus DEFAULT 0,
              suivi DEFAULT 1, unite TEXT,              -- unite for untracked
              active DEFAULT 1, created_at)
 movements   (id, ref_id→refs, location_id→locations,
@@ -217,7 +226,8 @@ a failed migration refuses to serve (fail loud, launchd retries, log says why).
 `pytest`, temp SQLite per test, no network:
 
 - **pricing.py**: cost/dose, margin ↔ price round-trips, arrondi, fiscal per régime
-  (spiritueux/vin/mousseux/bière/aucun, SS >18° boundary), droits_inclus on/off,
+  (spiritueux/vin/mousseux/bière/aucun, SS >18° boundary), droits_inclus on/off
+  (default off ⇒ taxes in cost), prix_ttc override vs computed (margin readouts follow),
   cocktail cost incl. untracked + consommable defaults, feasibility limiting factor.
 - **Ledger**: per-lieu derivation (comptage + later deltas, id-ordered), fractional
   counts, partial inventory (untouched refs keep theoretical), "Tous" aggregation.
@@ -244,5 +254,6 @@ CI: GitHub Actions, `ruff` + `pytest` on Linux.
 | Staff accountability | **Dropped** — single persona, badge decorative |
 | Import formats | **.xlsx + .csv** with mapping UI (openpyxl) |
 | Photos | **Dropped**, no placeholder |
-| Fiscal → pricing | **Per-ref `droits_inclus` toggle** (default: included ⇒ analytics only) |
+| Fiscal → pricing | **Per-ref `droits_inclus` toggle** (default: NOT included ⇒ taxes added to cost) |
+| Selling price | **Manual per-ref `prix_ttc` override** alongside the margin slider; NULL = computed |
 | Inventory | **Per lieu, partial allowed**, 1 open bottle/ref/lieu, clôture = touched refs only |
