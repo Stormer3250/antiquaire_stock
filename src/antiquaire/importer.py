@@ -7,7 +7,9 @@ import unicodedata
 import uuid
 
 import openpyxl
-from fastapi import APIRouter, HTTPException, UploadFile
+import openpyxl.styles
+import openpyxl.utils
+from fastapi import APIRouter, HTTPException, Response, UploadFile
 
 from antiquaire import stock
 from antiquaire.api import Conn
@@ -219,6 +221,56 @@ def apply_import(conn, token: str, mapping: dict, location_id: int, categorie_id
         conn.rollback()
         raise
     return {"created": created, "updated": updated, "lines": len(entry["rows"]), "errors": errors}
+
+
+# ---------- modèle à télécharger ----------
+
+# en-têtes choisis pour être reconnus tels quels par le pré-mappage de l'interface
+TEMPLATE_HEADERS = [
+    "Nom",
+    "Marque",
+    "Catégorie",
+    "Volume (cl)",
+    "Degré alcoolique",
+    "Prix d'achat HT",
+    "Quantité en stock",
+    "Fournisseur",
+]
+TEMPLATE_ROWS = [
+    ["Gin London Dry", "Sipsmith · Londres", "Spiritueux", 70, 41.6, 18.40, 6, "Dugas"],
+    ["Chenin sec Loire", "Domaine Huet", "Vin", 75, 13, 16.50, 9, "Vinifera"],
+]
+
+
+@router.get("/import/template")
+def import_template(format: str = "xlsx"):
+    if format == "csv":
+        out = io.StringIO()
+        writer = csv.writer(out, delimiter=";")
+        writer.writerow(TEMPLATE_HEADERS)
+        writer.writerows(TEMPLATE_ROWS)
+        return Response(
+            out.getvalue().encode("utf-8-sig"),
+            media_type="text/csv",
+            headers={"Content-Disposition": 'attachment; filename="modele-antiquaire.csv"'},
+        )
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Références"
+    ws.append(TEMPLATE_HEADERS)
+    for cell in ws[1]:
+        cell.font = openpyxl.styles.Font(bold=True)
+    for row in TEMPLATE_ROWS:
+        ws.append(row)
+    for i, header in enumerate(TEMPLATE_HEADERS, start=1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = max(len(header) + 4, 14)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return Response(
+        buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="modele-antiquaire.xlsx"'},
+    )
 
 
 # ---------- routes ----------
