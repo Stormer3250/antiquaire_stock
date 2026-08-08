@@ -1,0 +1,19 @@
+# Démo publique derrière le Traefik du VPS (HTTPS auto, mot de passe navigateur).
+# Le fichier .env voisin fournit ANTIQUAIRE_BASICAUTH (utilisateur:hash htpasswd).
+services:
+  antiquaire:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - antiquaire-data:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.antiquaire.entrypoints=websecure"
+      - "traefik.http.routers.antiquaire.rule=Host(`antiquaire.srv1493964.hstgr.cloud`)"
+      - "traefik.http.routers.antiquaire.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.antiquaire.middlewares=antiquaire-auth"
+      - "traefik.http.middlewares.antiquaire-auth.basicauth.users=${ANTIQUAIRE_BASICAUTH}"
+      - "traefik.http.services.antiquaire.loadbalancer.server.port=8000"
+
+volumes:
+  antiquaire-data:
