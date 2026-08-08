@@ -46,6 +46,21 @@ Tout vit dans **`~/AntiquaireStock/`** :
   ouvrable avec n'importe quel outil SQLite.
 - **Export CSV** : Configuration → « Exporter en CSV » (toutes les tables + niveaux de stock).
 
+## Démo en ligne (VPS, pas le bar)
+
+Une copie de démonstration tourne sur le serveur, protégée par un mot de passe navigateur :
+<https://antiquaire.srv1493964.hstgr.cloud>. Elle n'a rien à voir avec le Mac du bar (base
+séparée dans un volume Docker).
+
+```bash
+docker compose up -d --build           # démarrer / mettre à jour (lit .env, non versionné)
+python3 scripts/seed_demo.py http://<ip-du-conteneur>:8000   # remplir une base vide
+```
+
+`.env` contient `ANTIQUAIRE_BASICAUTH=utilisateur:hash` (`htpasswd -nbB`), les `$` doublés
+pour Docker Compose. Remettre la démo à zéro : `docker compose down -v` puis les deux
+commandes ci-dessus.
+
 ## Développement
 
 ```bash
