@@ -48,18 +48,21 @@ Tout vit dans **`~/AntiquaireStock/`** :
 
 ## Démo en ligne (VPS, pas le bar)
 
-Une copie de démonstration tourne sur le serveur, protégée par un mot de passe navigateur :
-<https://antiquaire.srv1493964.hstgr.cloud>. Elle n'a rien à voir avec le Mac du bar (base
-séparée dans un volume Docker).
+Une copie de démonstration tourne sur le serveur : <https://antiquaire.srv1493964.hstgr.cloud>.
+Elle n'a rien à voir avec le Mac du bar (base séparée dans un volume Docker).
+
+L'accès est géré par **Command Center** : le navigateur affiche un code court, on l'approuve
+depuis le téléphone, et la session obtenue ne donne accès qu'à cette application, pendant
+deux heures. Aucun mot de passe à transmettre, rien à configurer ici.
 
 ```bash
-docker compose up -d --build           # démarrer / mettre à jour (lit .env, non versionné)
+demo antiquaire_stock                  # allumer (ou l'allumer depuis /access sur le téléphone)
+demo antiquaire_stock down             # éteindre, les données restent
 python3 scripts/seed_demo.py http://<ip-du-conteneur>:8000   # remplir une base vide
 ```
 
-`.env` contient `ANTIQUAIRE_BASICAUTH=utilisateur:hash` (`htpasswd -nbB`), les `$` doublés
-pour Docker Compose. Remettre la démo à zéro : `docker compose down -v` puis les deux
-commandes ci-dessus.
+Remettre la démo à zéro : `docker compose down -v`, puis `docker compose up -d --build` et le
+script de remplissage.
 
 ## Développement
 

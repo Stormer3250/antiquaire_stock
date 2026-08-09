@@ -1,5 +1,5 @@
-# Démo publique derrière le Traefik du VPS (HTTPS auto, mot de passe navigateur).
-# Le fichier .env voisin fournit ANTIQUAIRE_BASICAUTH (utilisateur:hash htpasswd).
+# Démo publique derrière le Traefik du VPS (HTTPS auto).
+# L'authentification est déléguée à Command Center (forward-auth) : plus de mot de passe ici.
 services:
   antiquaire:
     build: .
@@ -11,8 +11,15 @@ services:
       - "traefik.http.routers.antiquaire.entrypoints=websecure"
       - "traefik.http.routers.antiquaire.rule=Host(`antiquaire.srv1493964.hstgr.cloud`)"
       - "traefik.http.routers.antiquaire.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.antiquaire.middlewares=antiquaire-auth"
-      - "traefik.http.middlewares.antiquaire-auth.basicauth.users=${ANTIQUAIRE_BASICAUTH}"
+      # La porte est Command Center : Traefik lui demande, avant chaque requête, si ce
+      # navigateur a le droit d'entrer ici (passkey, ou navigateur appairé depuis le téléphone).
+      - "traefik.http.routers.antiquaire.middlewares=ccauth"
+      - "traefik.http.middlewares.ccauth.forwardauth.address=http://127.0.0.1:8000/auth/forward"
+      - "traefik.http.middlewares.ccauth.forwardauth.trustForwardHeader=true"
+      # Découverte par la console /access de Command Center (liste + allumer/éteindre).
+      - "cc.demo=true"
+      - "cc.demo.host=antiquaire.srv1493964.hstgr.cloud"
+      - "cc.demo.label=L'Antiquaire"
       - "traefik.http.services.antiquaire.loadbalancer.server.port=8000"
 
 volumes:
