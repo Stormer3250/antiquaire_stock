@@ -89,3 +89,17 @@ vérifier le prix.
    à définir au moment du chantier tarifs.
 4. La colonne « Valeur du stock » du fichier d'origine est fausse (elle multiplie
    TTC × Cave × Haut) — ne pas s'y fier, l'app recalculera.
+
+## Droits d'alcool, depuis la vague 2
+
+Chaque référence répond maintenant à trois questions, dans cet ordre, sur sa fiche :
+contient-elle de l'alcool, sous quel régime fiscal (hérité de la catégorie sauf indication
+contraire, avec le taux réduit des DOM pour le rhum traditionnel), et enfin si le prix
+d'achat inclut déjà les droits. Une référence non alcoolisée ne paie aucun droit, quelle
+que soit sa catégorie : c'est la façon de suivre un soft sans lui coller d'accise.
+
+La dose se règle aussi par référence : laissée vide, elle suit la catégorie. À remplir
+pour les formats hors norme (magnum, 4,5 L) ou un service au verre particulier.
+
+Le taux réduit des DOM est éditable dans « Barème fiscal », à côté du taux métropolitain.
+Sa valeur par défaut (903,51 €/hL AP) est à confirmer avec le barème en vigueur.

@@ -10,17 +10,37 @@ class Fiscal(NamedTuple):
     hlap: float  # hL d'alcool pur dans la dose
 
 
+def effective_dose(ref: dict, cat: dict) -> float:
+    """Dose de la référence, ou celle de sa catégorie si elle n'en fixe pas."""
+    return ref["dose_cl"] if ref.get("dose_cl") is not None else cat["dose_cl"]
+
+
+def effective_regime(ref: dict, cat: dict) -> str:
+    """Cascade : pas d'alcool ⇒ aucun droit ; sinon régime propre, sinon catégorie."""
+    if not ref.get("alcoolise", 1):
+        return "aucun"
+    return ref.get("regime") or cat["regime"]
+
+
+def effective_marge(ref: dict, cat: dict) -> float:
+    return ref["marge_pct"] if ref.get("marge_pct") is not None else cat["marge_pct"]
+
+
 def doses_per_bottle(vol_cl: float, dose_cl: float) -> float:
     return vol_cl / dose_cl if dose_cl else 0.0
 
 
-def fiscal_per_dose(regime: str, abv: float, dose_cl: float, rates: dict) -> Fiscal:
+def fiscal_per_dose(
+    regime: str, abv: float, dose_cl: float, rates: dict, *, dom: bool = False
+) -> Fiscal:
     """Droits d'accise + cotisation SS pour UNE dose, selon le régime fiscal."""
     hl = dose_cl / 100 / 100  # cl → L → hL de produit fini
     hlap = hl * abv / 100
     accise = 0.0
     if regime == "spiritueux" and abv > 0:
-        accise = hlap * rates["accise"]
+        # rhum traditionnel des DOM : taux réduit, si le barème le connaît
+        taux = rates.get("accise_dom", rates["accise"]) if dom else rates["accise"]
+        accise = hlap * taux
     elif regime == "vin":
         accise = hl * (rates["mousseux"] if abv > 12.4 else rates["vin"])
     elif regime in ("mousseux", "intermediaire"):
@@ -40,13 +60,14 @@ def cost_per_dose(
     regime: str,
     abv: float,
     rates: dict,
+    dom: bool = False,
 ) -> float:
     """Coût matière d'une dose. Droits non inclus dans l'achat ⇒ taxes ajoutées."""
     doses = doses_per_bottle(vol_cl, dose_cl)
     base = achat_ht / doses if doses else 0.0
     if droits_inclus:
         return base
-    f = fiscal_per_dose(regime, abv, dose_cl, rates)
+    f = fiscal_per_dose(regime, abv, dose_cl, rates, dom=dom)
     return base + f.accise + f.ss
 
 

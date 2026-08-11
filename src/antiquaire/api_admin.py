@@ -21,9 +21,10 @@ def cost_per_cl(ref: dict, cat: dict, rates: dict) -> float:
         ref["vol_cl"],
         1.0,
         droits_inclus=bool(ref["droits_inclus"]),
-        regime=cat["regime"],
+        regime=pricing.effective_regime(ref, cat),
         abv=ref["abv"],
         rates=rates,
+        dom=bool(ref.get("dom", 0)),
     )
 
 
@@ -33,7 +34,8 @@ def serialize_cocktail(
     rates, pr = settings["rates"], settings["pricing"]
     ing_rows = conn.execute(
         """SELECT ci.id, ci.ref_id, ci.qty, r.nom, r.suivi, r.unite, r.vol_cl, r.achat_ht,
-                  r.abv, r.droits_inclus, r.active, c.regime, c.nom AS categorie_nom
+                  r.abv, r.droits_inclus, r.active, r.alcoolise, r.regime, r.dom,
+                  c.regime AS cat_regime, c.nom AS categorie_nom
            FROM cocktail_ings ci
            JOIN refs r ON r.id = ci.ref_id
            JOIN categories c ON c.id = r.categorie_id
@@ -43,7 +45,8 @@ def serialize_cocktail(
     ings, cost_lines, feas_lines = [], [], []
     for row in ing_rows:
         r = dict(row)
-        unit_cost = cost_per_cl(r, r, rates) if r["suivi"] else r["achat_ht"]
+        r_cat = {"regime": r["cat_regime"]}  # cost_per_cl attend une catégorie à part
+        unit_cost = cost_per_cl(r, r_cat, rates) if r["suivi"] else r["achat_ht"]
         line_cost = unit_cost * r["qty"]
         cost_lines.append({"cost_per_unit": unit_cost, "qty": r["qty"]})
         if r["suivi"] and r["qty"] > 0:

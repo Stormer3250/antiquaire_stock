@@ -3,7 +3,7 @@
 // colonne « Quantité en stock » est mappée.
 
 import { apiSend } from './api.js';
-import { esc } from './ui.js';
+import { esc, alertModal } from './ui.js';
 import { S } from './app.js';
 
 const IMP_FIELDS = [
@@ -118,29 +118,50 @@ function cardHtml() {
 
 // Monte la carte dans `container` ; onApplied() est appelé après chaque import réussi.
 export function mountImportCard(container, { onApplied } = {}) {
+  // Un seul chemin pour le bouton Parcourir et pour le fichier déposé.
+  async function handleFile(chosen) {
+    const fd = new FormData();
+    fd.append('file', chosen);
+    try {
+      const data = await apiSend('POST', '/api/import/inspect', fd);
+      imp.step = 'mapping';
+      imp.data = data;
+      imp.lieu = S.lieu !== 'tous' ? S.lieu : S.meta.locations[0]?.id;
+      imp.cat = S.meta.categories[0]?.id;
+      imp.mapping = {};
+      data.columns.forEach((col) => {
+        const h = col.header.toLowerCase();
+        const hit = Object.keys(HEADER_GUESS).find((g) => h.includes(g));
+        imp.mapping[col.key] = hit ? HEADER_GUESS[hit] : '';
+      });
+      repaint();
+    } catch (e) {
+      await alertModal({ title: 'Fichier illisible', body: e.message });
+    }
+  }
+
   function bind() {
     const file = container.querySelector('[data-imp-file]');
     if (file) {
-      file.addEventListener('change', async () => {
-        if (!file.files.length) return;
-        const fd = new FormData();
-        fd.append('file', file.files[0]);
-        try {
-          const data = await apiSend('POST', '/api/import/inspect', fd);
-          imp.step = 'mapping';
-          imp.data = data;
-          imp.lieu = S.lieu !== 'tous' ? S.lieu : S.meta.locations[0]?.id;
-          imp.cat = S.meta.categories[0]?.id;
-          imp.mapping = {};
-          data.columns.forEach((col) => {
-            const h = col.header.toLowerCase();
-            const hit = Object.keys(HEADER_GUESS).find((g) => h.includes(g));
-            imp.mapping[col.key] = hit ? HEADER_GUESS[hit] : '';
-          });
-          repaint();
-        } catch (e) {
-          alert(`Fichier illisible : ${e.message}`);
-        }
+      file.addEventListener('change', () => {
+        if (file.files.length) handleFile(file.files[0]);
+      });
+      // Glisser-déposer sur toute la carte : même chemin que le bouton.
+      ['dragenter', 'dragover'].forEach((ev) =>
+        container.addEventListener(ev, (e) => {
+          e.preventDefault();
+          container.classList.add('drop-hot');
+        })
+      );
+      ['dragleave', 'drop'].forEach((ev) =>
+        container.addEventListener(ev, (e) => {
+          e.preventDefault();
+          container.classList.remove('drop-hot');
+        })
+      );
+      container.addEventListener('drop', (e) => {
+        const dropped = e.dataTransfer.files[0];
+        if (dropped) handleFile(dropped);
       });
     }
     container.querySelectorAll('[data-imp-map]').forEach((s) =>
@@ -175,7 +196,7 @@ export function mountImportCard(container, { onApplied } = {}) {
         repaint();
         if (onApplied) await onApplied();
       } catch (e) {
-        alert(`Import impossible : ${e.message}`);
+        await alertModal({ title: 'Import impossible', body: e.message });
       }
     });
   }

@@ -6,6 +6,7 @@ import { S, reloadMeta, lieuQuery } from '../app.js';
 
 const PARAMS = [
   { key: 'accise', k: 'Droit d’accise · spiritueux', n: 'au hL d’alcool pur', unit: '€/hL AP', d: 0 },
+  { key: 'accise_dom', k: 'Droit d’accise · rhum des DOM', n: 'taux réduit, rhum traditionnel des départements d’outre-mer', unit: '€/hL AP', d: 2 },
   { key: 'ss', k: 'Cotisation sécurité sociale', n: 'boissons de plus de 18 % vol.', unit: '€/hL AP', d: 0 },
   { key: 'vin', k: 'Vin tranquille', n: 'au hL de produit fini', unit: '€/hL', d: 2 },
   { key: 'mousseux', k: 'Vin mousseux', n: 'champagnes et effervescents', unit: '€/hL', d: 2 },
@@ -16,6 +17,8 @@ export async function render(el) {
   const refsData = await apiGet(`/api/stock?lieu=${lieuQuery()}`);
   const tracked = refsData.refs.filter((r) => r.suivi);
   const rates = S.meta.rates;
+  // barème antérieur à la migration 002 : on retombe sur le taux métropolitain
+  if (rates.accise_dom === undefined) rates.accise_dom = rates.accise;
 
   // effet par dose, calculé sur les références réelles via la fiche
   const examples = await Promise.all(

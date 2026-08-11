@@ -322,3 +322,15 @@ select.input option { background: var(--input); color: var(--ink); }
 .wrap { flex-wrap: wrap; }
 .grow { flex: 1; min-width: 0; }
 .stack { display: flex; flex-direction: column; gap: 16px; }
+
+/* pied de barre latérale : quelle version tourne ici */
+.build-stamp {
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--mut3);
+}
+
+/* zone de dépôt survolée par un fichier */
+.drop-hot { border-color: var(--ac); background: var(--panel2); }

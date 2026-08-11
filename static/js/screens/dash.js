@@ -12,20 +12,21 @@ export async function render(el) {
   ]);
   const refs = stockData.refs.filter((r) => r.suivi);
   const cocktails = cocktailsData.cocktails;
-  const regimes = Object.fromEntries(S.meta.categories.map((c) => [c.id, c.regime]));
   const pr = S.meta.pricing;
 
   const totalValue = refs.reduce((a, r) => a + (r.valeur || 0), 0);
-  const doses = refs
-    .filter((r) => regimes[r.categorie_id] === 'spiritueux')
-    .reduce((a, r) => a + r.stock * (r.vol_cl / 5), 0);
+  const enStock = refs.filter((r) => r.stock > 0).length;
   const lowCount = refs.filter((r) => r.low).length;
   const avgMarge = cocktails.length
     ? cocktails.reduce((a, c) => a + c.marge, 0) / cocktails.length
     : 0;
 
   const kpis = [
-    { label: 'Doses disponibles', value: num(doses, 0), note: 'équivalent 5 cl de spiritueux' },
+    {
+      label: 'Références en stock',
+      value: String(enStock),
+      note: `sur ${refs.length} référence${refs.length > 1 ? 's' : ''} suivie${refs.length > 1 ? 's' : ''}`,
+    },
     cocktails.length
       ? { label: 'Marge moyenne carte', value: pc(avgMarge, 1), note: `cible ${pc(pr.cible)}, plancher ${pc(pr.min)}` }
       : { label: 'Marge moyenne carte', value: '—', note: 'aucune fiche cocktail pour l’instant' },
@@ -68,8 +69,8 @@ export async function render(el) {
     <div class="hero">
       <div class="mono-label">Valeur de la cave · prix d’achat HT · ${esc(lieuLabel())}</div>
       <div class="hero-value">${eur(totalValue, 0)}</div>
-      <div class="hero-note">${num(doses, 0)} doses de 5 cl au comptoir, sur ${refs.length}
-        référence${refs.length > 1 ? 's' : ''} suivie${refs.length > 1 ? 's' : ''}.</div>
+      <div class="hero-note">${enStock} référence${enStock > 1 ? 's' : ''} en stock,
+        sur ${refs.length} suivie${refs.length > 1 ? 's' : ''}.</div>
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
       ${kpis.map((k) => `

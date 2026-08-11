@@ -107,3 +107,28 @@ def test_location_create_and_rename(client):
     client.patch(f"/api/locations/{lid}", json={"nom": "Cave"})
     noms = [loc["nom"] for loc in client.get("/api/state").json()["locations"]]
     assert "Cave" in noms and "Cave du bas" not in noms
+
+
+def test_cocktail_cost_respects_the_reference_cascade(client):
+    """Le coût d'une fiche suit alcoolise/dom, pas seulement le régime de catégorie."""
+    spirit = next(
+        c for c in client.get("/api/state").json()["categories"] if c["regime"] == "spiritueux"
+    )
+    base = {
+        "nom": "Rhum test",
+        "categorie_id": spirit["id"],
+        "vol_cl": 70,
+        "abv": 50,
+        "achat_ht": 25.0,
+    }
+    plain = client.post("/api/refs", json=base).json()["id"]
+    dom = client.post("/api/refs", json={**base, "nom": "Rhum DOM test", "dom": True}).json()["id"]
+
+    def cost_of(ref_id):
+        cid = client.post("/api/cocktails", json={}).json()["id"]
+        client.patch(f"/api/cocktails/{cid}", json={"ings": [{"ref_id": ref_id, "qty": 5}]})
+        return next(c for c in client.get("/api/cocktails").json()["cocktails"] if c["id"] == cid)[
+            "cost"
+        ]
+
+    assert cost_of(dom) < cost_of(plain)

@@ -69,3 +69,23 @@ export function confirmModal({ title, body, label = 'Supprimer' }) {
     scrim.querySelector('[data-no]').focus();
   });
 }
+
+export function alertModal({ title, body = '' }) {
+  return new Promise((resolve) => {
+    root().innerHTML = `
+      <div class="scrim"><div class="modal confirm">
+        <div style="padding:22px 24px 16px; display:flex; flex-direction:column; gap:9px;">
+          <div class="serif-title" style="font-size:20px;">${esc(title)}</div>
+          ${body ? `<div style="font-size:13px; color:var(--mut);" class="pretty">${esc(body)}</div>` : ''}
+        </div>
+        <div style="display:flex; justify-content:flex-end; padding:14px 24px; border-top:1px solid var(--line);">
+          <button class="btn-solid" data-ok>Compris</button>
+        </div>
+      </div></div>`;
+    const scrim = root().firstElementChild;
+    const done = () => { closeModal(); resolve(); };
+    scrim.querySelector('[data-ok]').addEventListener('click', done);
+    scrim.addEventListener('mousedown', (e) => { if (e.target === scrim) done(); });
+    scrim.querySelector('[data-ok]').focus();
+  });
+}

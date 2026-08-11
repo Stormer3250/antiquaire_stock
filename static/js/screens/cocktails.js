@@ -1,7 +1,7 @@
 // Cartes & recettes : liste des fiches, éditeur, coût matière, marge, faisabilité.
 
 import { apiGet, apiSend } from '../api.js';
-import { esc, eur, num, pc, confirmModal } from '../ui.js';
+import { esc, eur, num, pc, confirmModal, alertModal } from '../ui.js';
 import { S, refresh, lieuQuery, lieuLabel } from '../app.js';
 import { openRefModal } from '../refmodal.js';
 
@@ -248,9 +248,15 @@ export async function render(el) {
       patchIngs(ings);
     })
   );
-  el.querySelector('[data-ing-add]').addEventListener('click', () => {
+  el.querySelector('[data-ing-add]').addEventListener('click', async () => {
     const first = refs.find((r) => r.suivi);
-    if (!first) { alert('Créez d’abord une référence suivie.'); return; }
+    if (!first) {
+      await alertModal({
+        title: 'Aucune référence suivie',
+        body: 'Créez une référence suivie avant d’ajouter un ingrédient à une fiche.',
+      });
+      return;
+    }
     patchIngs([...c.ings, { ref_id: first.id, qty: 2 }]);
   });
   el.querySelector('[data-new-tracked]').addEventListener('click', () =>

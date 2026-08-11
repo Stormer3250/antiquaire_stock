@@ -100,3 +100,56 @@ def test_order_suggestions_groups_and_ceils():
     assert [g["fournisseur"] for g in groups] == ["Dugas", "Vinifera"]
     assert groups[0]["lines"] == [{"nom": "Gin", "stock": 2, "seuil": 5, "quantite": 7}]
     assert groups[1]["lines"][0]["quantite"] == 11
+
+
+RATES_DOM = {**RATES, "accise_dom": 903.51}
+
+
+def test_effective_dose_inherits_then_overrides():
+    cat = {"dose_cl": 5, "regime": "spiritueux", "marge_pct": 80}
+    assert pricing.effective_dose({"dose_cl": None}, cat) == 5
+    assert pricing.effective_dose({"dose_cl": 12}, cat) == 12
+
+
+def test_effective_regime_cascade():
+    cat = {"dose_cl": 5, "regime": "spiritueux", "marge_pct": 80}
+    # 1. pas d'alcool : aucun droit, quel que soit le régime de la catégorie
+    assert pricing.effective_regime({"alcoolise": 0, "regime": None}, cat) == "aucun"
+    # 2. alcoolisé sans précision : régime hérité
+    assert pricing.effective_regime({"alcoolise": 1, "regime": None}, cat) == "spiritueux"
+    # 3. alcoolisé avec override
+    assert pricing.effective_regime({"alcoolise": 1, "regime": "vin"}, cat) == "vin"
+
+
+def test_effective_marge_inherits_then_overrides():
+    cat = {"dose_cl": 5, "regime": "spiritueux", "marge_pct": 80}
+    assert pricing.effective_marge({"marge_pct": None}, cat) == 80
+    assert pricing.effective_marge({"marge_pct": 72}, cat) == 72
+
+
+def test_dom_rate_applies_to_spiritueux_only():
+    metro = pricing.fiscal_per_dose("spiritueux", 40, 5, RATES_DOM)
+    dom = pricing.fiscal_per_dose("spiritueux", 40, 5, RATES_DOM, dom=True)
+    assert math.isclose(dom.accise, metro.hlap * 903.51)
+    assert dom.accise < metro.accise
+    assert dom.ss == metro.ss  # la cotisation SS n'est pas réduite
+    # le drapeau n'a aucun effet hors spiritueux
+    vin = pricing.fiscal_per_dose("vin", 12, 12, RATES_DOM)
+    vin_dom = pricing.fiscal_per_dose("vin", 12, 12, RATES_DOM, dom=True)
+    assert vin.accise == vin_dom.accise
+
+
+def test_dom_rate_falls_back_when_absent():
+    """Un barème antérieur à la migration ne doit pas planter."""
+    f = pricing.fiscal_per_dose("spiritueux", 40, 5, RATES, dom=True)
+    assert math.isclose(f.accise, f.hlap * 1954)
+
+
+def test_cost_per_dose_accepts_dom():
+    plain = pricing.cost_per_dose(
+        30, 70, 5, droits_inclus=False, regime="spiritueux", abv=40, rates=RATES_DOM
+    )
+    reduced = pricing.cost_per_dose(
+        30, 70, 5, droits_inclus=False, regime="spiritueux", abv=40, rates=RATES_DOM, dom=True
+    )
+    assert reduced < plain

@@ -130,3 +130,91 @@ def test_untracked_ref_has_no_stock_price(client):
 def test_health(client):
     h = client.get("/api/health").json()
     assert h["ok"] is True and h["db_ok"] is True
+
+
+# ---------- cascade fiscale & dose par référence ----------
+
+
+def spirit_cat(client):
+    return next(
+        c for c in client.get("/api/state").json()["categories"] if c["regime"] == "spiritueux"
+    )
+
+
+def test_soft_drink_pays_no_duty_whatever_the_category(client):
+    """Une référence non alcoolisée rangée dans Spiritueux ne paie aucun droit."""
+    rid = client.post(
+        "/api/refs",
+        json={
+            "nom": "Tonic maison",
+            "categorie_id": spirit_cat(client)["id"],
+            "vol_cl": 20,
+            "abv": 0,
+            "achat_ht": 1.20,
+            "alcoolise": False,
+        },
+    ).json()["id"]
+    fiche = client.get(f"/api/refs/{rid}").json()
+    assert fiche["alcoolise"] is False
+    assert fiche["regime"] == "aucun"
+    assert fiche["fiscal"]["accise"] == 0
+    assert fiche["fiscal"]["ss"] == 0
+    assert fiche["cout_dose"] == fiche["cout_dose_base"]
+
+
+def test_reference_regime_overrides_its_category(client):
+    rid = client.post(
+        "/api/refs",
+        json={
+            "nom": "Vermouth maison",
+            "categorie_id": spirit_cat(client)["id"],
+            "vol_cl": 75,
+            "abv": 16,
+            "achat_ht": 12.0,
+            "regime": "intermediaire",
+        },
+    ).json()["id"]
+    fiche = client.get(f"/api/refs/{rid}").json()
+    assert fiche["regime"] == "intermediaire"
+    assert fiche["regime_custom"] is True
+
+
+def test_dom_flag_lowers_the_duty(client):
+    body = {
+        "nom": "Rhum agricole",
+        "categorie_id": spirit_cat(client)["id"],
+        "vol_cl": 70,
+        "abv": 50,
+        "achat_ht": 25.0,
+    }
+    metro_id = client.post("/api/refs", json=body).json()["id"]
+    metro = client.get(f"/api/refs/{metro_id}").json()
+    dom_id = client.post("/api/refs", json={**body, "nom": "Rhum DOM", "dom": True}).json()["id"]
+    dom = client.get(f"/api/refs/{dom_id}").json()
+    assert dom["dom"] is True
+    assert dom["fiscal"]["accise"] < metro["fiscal"]["accise"]
+    assert dom["cout_dose"] < metro["cout_dose"]
+
+
+def test_reference_dose_overrides_the_category(client):
+    rid = client.post(
+        "/api/refs",
+        json={
+            "nom": "Magnum de rhum",
+            "categorie_id": spirit_cat(client)["id"],
+            "vol_cl": 450,
+            "abv": 40,
+            "achat_ht": 86.20,
+            "dose_cl": 4,
+        },
+    ).json()["id"]
+    fiche = client.get(f"/api/refs/{rid}").json()
+    assert fiche["dose_cl"] == 4
+    assert fiche["dose_custom"] is True
+    assert fiche["doses_par_bouteille"] == 450 / 4
+
+
+def test_health_carries_the_build_stamp(client):
+    h = client.get("/api/health").json()
+    assert h["version"]
+    assert len(h["build"]) == 10  # AAAA-MM-JJ
