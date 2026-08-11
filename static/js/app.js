@@ -12,6 +12,7 @@ import * as bareme from './screens/bareme.js';
 import * as config from './screens/config.js';
 import { openReception } from './reception.js';
 import { openRefModal } from './refmodal.js';
+import { installSelectUpgrader } from './select.js';
 
 export const S = {
   meta: null,          // /api/state : pricing, rates, lists, categories, locations
@@ -112,6 +113,7 @@ async function route() {
 
 async function boot() {
   await reloadMeta();
+  installSelectUpgrader();
   document.getElementById('btn-reception').addEventListener('click', () => openReception());
   document.getElementById('btn-new-ref').addEventListener('click', () => openRefModal());
   window.addEventListener('hashchange', route);
