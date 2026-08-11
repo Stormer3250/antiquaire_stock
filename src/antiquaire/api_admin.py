@@ -76,6 +76,8 @@ def serialize_cocktail(
     ht = prix / 1.2
     marge = (ht - cost) / ht * 100 if ht > 0 else 0.0
     feas = pricing.feasibility(feas_lines)
+    # marge visée par CETTE fiche : la sienne, sinon celle de la maison
+    cible = cocktail["marge_pct"] if cocktail["marge_pct"] is not None else pr["cible"]
     return {
         "id": cocktail["id"],
         "nom": cocktail["nom"],
@@ -90,7 +92,10 @@ def serialize_cocktail(
         "marge": marge,
         "tva": prix - ht,
         "ok": marge >= pr["min"],
-        "suggested": pricing.suggested_cocktail_price(cost, pr["cible"], pr["arrondi"]),
+        "marge_cible": cible,
+        "marge_custom": cocktail["marge_pct"] is not None,
+        "prix_fixe": bool(cocktail["prix_fixe"]),
+        "suggested": pricing.suggested_cocktail_price(cost, cible, pr["arrondi"]),
         "feasibility": {"services": feas[0], "limitant": feas[1]} if feas else None,
     }
 
@@ -135,8 +140,20 @@ def cocktail_patch(cid: int, conn: Conn, body: dict = Body(...)):
     fields = {
         k: v
         for k, v in body.items()
-        if k in {"nom", "famille", "verre", "prix_ttc", "description", "position"}
+        if k
+        in {
+            "nom",
+            "famille",
+            "verre",
+            "prix_ttc",
+            "description",
+            "position",
+            "marge_pct",
+            "prix_fixe",
+        }
     }
+    if "prix_fixe" in fields:
+        fields["prix_fixe"] = bool(fields["prix_fixe"])
     try:
         if fields:
             sets = ", ".join(f"{k} = ?" for k in fields)

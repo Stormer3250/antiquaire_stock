@@ -37,7 +37,8 @@ const root = () => document.getElementById('modal-root');
 // Échap ferme la surface du dessus. Chaque ouvreur dit ici comment il veut être fermé :
 // une modale ordinaire disparaît, une confirmation doit en plus répondre « non ».
 let onEscape = null;
-document.addEventListener('keydown', (e) => {
+// le garde-fou permet d'importer ce module hors navigateur (auto-vérifications)
+if (typeof document !== 'undefined') document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !onEscape) return;
   // une liste déroulante ouverte se ferme d'abord : Échap vise toujours la surface
   // la plus intérieure, jamais la fenêtre qui la contient

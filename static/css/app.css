@@ -435,3 +435,20 @@ select.input option { background: var(--input); color: var(--ink); }
 .whatsnew-list li { font-size: 13px; color: var(--mut); line-height: 1.55; }
 .build-stamp { cursor: pointer; }
 .build-stamp:hover { color: var(--ac); }
+
+/* ---------- sélection de lignes et barre de synthèse ---------- */
+.tick { display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.tick input { accent-color: var(--ac); cursor: pointer; }
+.trow.picked { background: var(--panel2); box-shadow: inset 2px 0 0 var(--ac); }
+.table-summary {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 12px 20px; background: var(--panel2); border-top: 1px solid var(--ac);
+}
+.sum-figs { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--mut); }
+.sum-figs b { color: var(--ink); font-size: 12.5px; margin-left: 5px; }
+.sum-count {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ac);
+}
+.sum-hidden { color: var(--mut3); font-size: 11.5px; }
