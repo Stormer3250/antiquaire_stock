@@ -2,9 +2,10 @@
 // Les données sont chargées à l'ouverture, pas à chaque frappe.
 
 import { apiGet, apiSend } from './api.js';
-import { esc, closeModal } from './ui.js';
+import { esc, closeModal, setEscape } from './ui.js';
 import { normalise } from './select.js';
 import { go } from './app.js';
+import { claim, release } from './overlay.js';
 import { openReception } from './reception.js';
 import { openRefModal } from './refmodal.js';
 
@@ -73,6 +74,7 @@ async function collect() {
 export async function openPalette() {
   if (open) return;
   open = true;
+  claim('palette');   // ouverte à la demande : elle passe devant tout le reste
   const root = document.getElementById('modal-root');
   const items = await collect();
   let shown = [];
@@ -97,6 +99,7 @@ export async function openPalette() {
   function close() {
     open = false;
     closeModal();
+    release('palette');
     document.removeEventListener('keydown', keys, true);
   }
 
@@ -145,6 +148,7 @@ export async function openPalette() {
     } else if (e.key === 'Enter') { e.preventDefault(); pick(cursor); }
   }
 
+  setEscape(close);   // remplace le gestionnaire de la modale que la palette recouvre
   input.addEventListener('input', () => { cursor = 0; paint(); });
   scrim.addEventListener('mousedown', (e) => { if (e.target === scrim) close(); });
   document.addEventListener('keydown', keys, true);

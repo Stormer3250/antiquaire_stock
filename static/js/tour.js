@@ -2,7 +2,10 @@
 // box-shadow : un seul élément couvre la page et laisse un trou sur la cible.
 // Reprise du GuidedTour de l'éditeur e-facture, en JS sans framework.
 
+import { auto, claim, release } from './overlay.js';
+
 const SEEN = (ecran) => `antiquaire.tour.${ecran}`;
+const AUTO_OFF = 'antiquaire.tour.silence';   // l'utilisateur a demandé qu'on le laisse
 
 // Chaque étape vise un sélecteur déjà présent dans l'écran. Une cible absente est
 // simplement sautée : un écran vide ne casse pas la visite.
@@ -68,6 +71,7 @@ let active = null;
 export function startTour(ecran) {
   const steps = (STEPS[ecran] || []).filter(([sel]) => document.querySelector(sel));
   if (!steps.length || active) return;
+  claim('tour');
 
   const overlay = document.createElement('div');
   overlay.className = 'tour-overlay';
@@ -77,13 +81,17 @@ export function startTour(ecran) {
   active = { overlay, bubble };
   let i = 0;
 
-  function stop() {
+  function stop(silence = false) {
     localStorage.setItem(SEEN(ecran), '1');
+    // « Passer » vaut pour toute l'application : quelqu'un qui refuse une visite
+    // ne veut pas qu'on la lui propose sur les six écrans suivants.
+    if (silence) localStorage.setItem(AUTO_OFF, '1');
     overlay.remove();
     bubble.remove();
     window.removeEventListener('resize', paint);
     document.removeEventListener('keydown', keys, true);
     active = null;
+    release('tour');
   }
 
   function keys(e) {
@@ -117,7 +125,7 @@ export function startTour(ecran) {
       <div class="serif-title tour-title"></div>
       <div class="tour-text pretty"></div>
       <div class="tour-actions">
-        <button class="btn muted" data-skip>Passer</button>
+        <button class="btn muted" data-skip title="Arrête aussi les visites proposées automatiquement">Passer</button>
         <div class="row" style="gap:8px;">
           ${i > 0 ? '<button class="btn" data-prev>Précédent</button>' : ''}
           <button class="btn-solid" data-next>${i === steps.length - 1 ? 'Terminer' : 'Suivant'}</button>
@@ -129,12 +137,12 @@ export function startTour(ecran) {
     const below = r.bottom + 190 < window.innerHeight;
     bubble.style.top = below ? `${r.bottom + 14}px` : `${Math.max(12, r.top - 200)}px`;
     bubble.style.left = `${Math.min(Math.max(12, r.left), window.innerWidth - 400)}px`;
-    bubble.querySelector('[data-skip]').addEventListener('click', stop);
+    bubble.querySelector('[data-skip]').addEventListener('click', () => stop(true));
     bubble.querySelector('[data-next]').addEventListener('click', () => move(1));
     bubble.querySelector('[data-prev]')?.addEventListener('click', () => move(-1));
   }
 
-  overlay.addEventListener('click', stop);
+  overlay.addEventListener('click', () => stop());
   window.addEventListener('resize', paint);
   document.addEventListener('keydown', keys, true);
   paint();
@@ -144,18 +152,31 @@ export function startTour(ecran) {
 // l'explication une fois, jamais deux.
 export function autoTour(ecran) {
   if (!STEPS[ecran] || localStorage.getItem(SEEN(ecran))) return;
+  if (localStorage.getItem(AUTO_OFF)) return;
   setTimeout(() => {
-    // une modale à l'écran (« Quoi de neuf », une fiche en cours) passe avant :
-    // l'écran n'est pas marqué comme vu, la visite se proposera au prochain passage.
-    if (document.getElementById('modal-root').children.length) return;
-    startTour(ecran);
+    // l'arbitre décide : si une autre surface occupe l'écran, la visite attend
+    // qu'elle se ferme au lieu de s'ouvrir par-dessus.
+    if (ecranCourant() !== ecran) return;   // l'utilisateur est déjà parti ailleurs
+    auto('tour', () => {
+      // l'attente a pu durer : on ne s'ouvre que si l'écran est toujours celui-là
+      if (ecranCourant() !== ecran) { release('tour'); return; }
+      startTour(ecran);
+    });
   }, 600);
 }
 
+// Renseigné par app.js : la visite différée ne doit pas s'ouvrir sur un autre écran.
+let ecranCourant = () => null;
+export function setEcranCourant(fn) {
+  ecranCourant = fn;
+}
+
 export function installTour(currentScreen) {
+  setEcranCourant(currentScreen);
   document.getElementById('btn-tour')?.addEventListener('click', () => {
     const ecran = currentScreen();
     localStorage.removeItem(SEEN(ecran));   // relancer à la demande doit toujours marcher
+    localStorage.removeItem(AUTO_OFF);      // et rouvre la porte aux visites proposées
     startTour(ecran);
   });
 }

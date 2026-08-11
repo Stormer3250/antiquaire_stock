@@ -30,13 +30,38 @@ export function parseNum(v) {
 
 // ---------- modales ----------
 
+import { claim, release } from './overlay.js';
+
 const root = () => document.getElementById('modal-root');
+
+// Échap ferme la surface du dessus. Chaque ouvreur dit ici comment il veut être fermé :
+// une modale ordinaire disparaît, une confirmation doit en plus répondre « non ».
+let onEscape = null;
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !onEscape) return;
+  // une liste déroulante ouverte se ferme d'abord : Échap vise toujours la surface
+  // la plus intérieure, jamais la fenêtre qui la contient
+  if (document.querySelector('.cc-sel-panel')) return;
+  e.preventDefault();
+  const fn = onEscape;
+  onEscape = null;
+  fn();
+}, true);
+
+// Pour les surfaces qui écrivent elles-mêmes dans modal-root (la palette).
+export function setEscape(fn) {
+  onEscape = fn;
+}
 
 export function closeModal() {
   root().innerHTML = '';
+  onEscape = null;
+  release('modal');
 }
 
 export function openModal(html, { width } = {}) {
+  claim('modal');
+  onEscape = closeModal;
   root().innerHTML = `<div class="scrim"><div class="modal"${width ? ` style="width:${width}px"` : ''}>${html}</div></div>`;
   const scrim = root().firstElementChild;
   scrim.addEventListener('mousedown', (e) => { if (e.target === scrim) closeModal(); });
@@ -62,6 +87,8 @@ export function confirmModal({ title, body, label = 'Supprimer' }) {
       </div></div>`;
     const scrim = root().firstElementChild;
     const done = (v) => { closeModal(); resolve(v); };
+    claim('modal');
+    onEscape = () => done(false);   // Échap sur une confirmation vaut « non »
     scrim.querySelector('[data-no]').addEventListener('click', () => done(false));
     scrim.querySelector('[data-yes]').addEventListener('click', () => done(true));
     scrim.addEventListener('mousedown', (e) => { if (e.target === scrim) done(false); });
@@ -84,6 +111,8 @@ export function alertModal({ title, body = '' }) {
       </div></div>`;
     const scrim = root().firstElementChild;
     const done = () => { closeModal(); resolve(); };
+    claim('modal');
+    onEscape = done;
     scrim.querySelector('[data-ok]').addEventListener('click', done);
     scrim.addEventListener('mousedown', (e) => { if (e.target === scrim) done(); });
     scrim.querySelector('[data-ok]').focus();
