@@ -5,10 +5,11 @@ ALTER TABLE refs ADD COLUMN regime TEXT;
 ALTER TABLE refs ADD COLUMN dom INTEGER NOT NULL DEFAULT 0;
 
 -- Reprise de l'existant : une référence dont la catégorie n'a aucun régime
--- fiscal, ou dont le degré est nul, n'est pas alcoolisée.
+-- fiscal n'est pas alcoolisée. Un degré vide n'est PAS un critère : c'est une
+-- donnée manquante, pas une déclaration d'absence d'alcool (et les droits sont
+-- de toute façon nuls tant que le degré vaut zéro).
 UPDATE refs SET alcoolise = 0
-WHERE abv <= 0
-   OR categorie_id IN (SELECT id FROM categories WHERE regime = 'aucun');
+WHERE categorie_id IN (SELECT id FROM categories WHERE regime = 'aucun');
 
 -- Taux réduit applicable au rhum traditionnel des DOM, éditable dans le barème.
 UPDATE settings
