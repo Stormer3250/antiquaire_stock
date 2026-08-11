@@ -4,17 +4,41 @@ import { apiGet, apiSend } from '../api.js';
 import { esc, eur, num, pc, confirmModal, alertModal } from '../ui.js';
 import { S, refresh, lieuQuery, lieuLabel } from '../app.js';
 import { openRefModal } from '../refmodal.js';
-import { sortState, applySort, bindSort } from '../sortable.js';
+import { applySort, bindSort } from '../sortable.js';
+import { tableState } from '../table.js';
 
-let sel = null;  // fiche sélectionnée (persiste pendant la session)
-const SORT = sortState('nom');   // ordre de la colonne de gauche
+let sel = null;                    // fiche ouverte dans l'éditeur
+const T = 'cocktails';             // tri et fiches cochées, tenus par table.js
+
+// Ce que l'on veut savoir d'un paquet de fiches : ce qu'il rapporte et à quel point
+// ses prix sont dispersés. C'est la même mesure que la phase des menus reprendra.
+function cartesSummary(picked) {
+  const moy = (f) => picked.reduce((a, x) => a + f(x), 0) / picked.length;
+  const prix = picked.map((x) => x.prix_ttc);
+  const bas = Math.min(...prix);
+  const haut = Math.max(...prix);
+  return `
+  <div class="table-summary" style="flex-direction:column; align-items:stretch; gap:9px;">
+    <div class="sum-figs" style="flex-direction:column; gap:7px;">
+      <span class="sum-count">${picked.length} fiche${picked.length > 1 ? 's' : ''} retenue${picked.length > 1 ? 's' : ''}</span>
+      <span>Marge moyenne <b class="num">${pc(moy((x) => x.marge), 1)}</b></span>
+      <span>Prix moyen <b class="num">${eur(moy((x) => x.prix_ttc))}</b></span>
+      <span>Coût matière moyen <b class="num">${eur(moy((x) => x.cost))}</b></span>
+      <span>De <b class="num">${eur(bas)}</b> à <b class="num">${eur(haut)}</b>, écart <b class="num">${eur(haut - bas)}</b></span>
+    </div>
+    <button class="btn muted" data-unpick>Tout décocher</button>
+  </div>`;
+}
 
 export async function render(el) {
   const [cocktailsData, stockData] = await Promise.all([
     apiGet(`/api/cocktails?lieu=${lieuQuery()}`),
     apiGet(`/api/stock`),
   ]);
+  const state = tableState(T, 'nom');
+  const SORT = state.sort;
   const cocktails = applySort(cocktailsData.cocktails, SORT);
+  const picked = cocktails.filter((x) => state.selected.has(x.id));
   const refs = stockData.refs;
   const pr = S.meta.pricing;
   const c = cocktails.find((x) => x.id === sel) || cocktails[0] || null;
@@ -43,6 +67,8 @@ export async function render(el) {
     ${cocktails.map((x) => `
     <div class="row" style="border-left:2px solid ${c && x.id === c.id ? 'var(--ac)' : 'transparent'};
       border-bottom:1px solid var(--line2); background:${c && x.id === c.id ? 'var(--panel2)' : 'transparent'}; gap:0;">
+      <label class="tick" style="padding-left:10px;"><input type="checkbox" data-tick="${x.id}"
+        ${state.selected.has(x.id) ? 'checked' : ''} aria-label="Retenir cette fiche"></label>
       <button data-pick="${x.id}" style="flex:1; min-width:0; text-align:left; padding:13px 8px 13px 16px;
         background:transparent; border:none; color:${c && x.id === c.id ? 'var(--ink)' : 'var(--mut)'};
         font-family:var(--sans); cursor:pointer;">
@@ -55,6 +81,7 @@ export async function render(el) {
     <button data-new style="display:block; width:100%; padding:13px 18px; background:transparent; border:none;
       color:var(--ac); text-align:left; font-family:var(--mono); font-size:11px; letter-spacing:.1em;
       text-transform:uppercase; cursor:pointer;">+ Nouvelle fiche</button>
+    ${picked.length ? cartesSummary(picked) : ''}
   </div>`;
 
   // ---------- éditeur ----------
@@ -177,6 +204,18 @@ export async function render(el) {
   // ---------- liaisons ----------
 
   bindSort(el, SORT, () => render(el));
+  el.querySelectorAll('[data-tick]').forEach((box) =>
+    box.addEventListener('change', () => {
+      const id = Number(box.dataset.tick);
+      if (box.checked) state.selected.add(id);
+      else state.selected.delete(id);
+      render(el);
+    })
+  );
+  el.querySelector('[data-unpick]')?.addEventListener('click', () => {
+    state.selected.clear();
+    render(el);
+  });
   el.querySelectorAll('[data-pick]').forEach((b) =>
     b.addEventListener('click', () => { sel = Number(b.dataset.pick); render(el); })
   );

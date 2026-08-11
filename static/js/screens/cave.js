@@ -5,23 +5,22 @@ import { esc, eur, num, parseNum, confirmModal } from '../ui.js';
 import { S, refresh, lieuQuery, fmtStock } from '../app.js';
 import { openRefModal } from '../refmodal.js';
 import { mountImportCard } from '../importcard.js';
-import { sortState, applySort, sortHeader, bindSort } from '../sortable.js';
+import { renderTable, bindTable, tableState } from '../table.js';
+import { openBulkModal } from '../bulkmodal.js';
 
-const SORT = sortState('nom');    // table des références suivies
-const USORT = sortState('nom');   // table des garnitures
+const T_SUIVIES = 'cave-suivies';
+const T_GARNITURES = 'cave-garnitures';
 
-const GRID = 'grid-template-columns:2fr .7fr 1fr 1fr 1fr .8fr .8fr 66px;';
-const UGRID = 'grid-template-columns:2fr 1fr 1fr 1fr 66px;';
+const GRID = '2fr .7fr 1fr 1fr 1fr .8fr .8fr 66px';
+const UGRID = '2fr 1fr 1fr 1fr 66px';
 
 export async function render(el) {
   const [stockData, importsData] = await Promise.all([
     apiGet(`/api/stock?lieu=${lieuQuery()}`),
     apiGet('/api/imports'),
   ]);
-  const tracked = applySort(stockData.refs.filter((r) => r.suivi), SORT);
-  const untracked = applySort(
-    stockData.refs.filter((r) => !r.suivi && r.categorie_nom !== 'Consommable'), USORT
-  );
+  const tracked = stockData.refs.filter((r) => r.suivi);
+  const untracked = stockData.refs.filter((r) => !r.suivi && r.categorie_nom !== 'Consommable');
   const low = tracked.filter((r) => r.low).length;
 
   const patchRef = async (id, body) => {
@@ -29,50 +28,123 @@ export async function render(el) {
     await render(el);
   };
 
-  const trackedBody = tracked.length === 0
-    ? `<div class="empty-note">Aucune référence suivie — créez-en avec « + Référence » ou déposez un fichier ci-contre.</div>`
-    : tracked.map((r) => `
-    <div class="trow" style="${GRID} padding:11px 20px;">
-      <div class="cell-main">
-        <div class="nom">${esc(r.nom)}</div>
-        <div class="sub">${esc(r.marque)}${r.fournisseur ? ' · ' + esc(r.fournisseur) : ''}</div>
-      </div>
-      <div class="num r" style="font-size:12.5px;">${fmtStock(r)}</div>
-      <div class="stepper" data-seuil="${r.id}">
-        <button data-dir="-1">–</button><span class="val">${num(r.seuil, 0)}</span><button data-dir="1">+</button>
-      </div>
-      <div class="stepper" data-par="${r.id}">
-        <button data-dir="-1">–</button><span class="val">${num(r.par_target, 0)}</span><button data-dir="1">+</button>
-      </div>
-      <input class="input num" data-achat="${r.id}" value="${num(r.achat_ht, 2)}" aria-label="Prix d'achat">
-      <input class="input num" data-marge="${r.id}" value="${num(r.marge, 0)}" aria-label="Marge">
-      ${r.low
-        ? '<div class="chip-low">SOUS SEUIL</div>'
-        : '<div class="num r" style="font-size:10.5px; color:var(--ok-ink); justify-self:end;">suffisant</div>'}
-      <div class="row" style="gap:5px; justify-self:end;">
-        <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer">ÉD</button>
-        <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button>
-      </div>
-    </div>`).join('');
-
-  const untrackedBody = untracked.length === 0
-    ? `<div class="empty-note">Aucune garniture — elles servent uniquement à chiffrer les fiches cocktails.</div>`
-    : untracked.map((r) => {
+  const suiviesSpec = {
+    id: T_SUIVIES,
+    defaultSort: 'nom',
+    grid: GRID,
+    select: true,
+    rows: tracked,
+    columns: [
+      {
+        key: 'nom',
+        label: 'Référence',
+        cell: (r) => `
+          <div class="cell-main">
+            <div class="nom">${esc(r.nom)}</div>
+            <div class="sub">${esc(r.marque)}${r.fournisseur ? ' · ' + esc(r.fournisseur) : ''}</div>
+          </div>`,
+      },
+      { key: 'stock', label: 'Stock', align: 'r',
+        cell: (r) => `<div class="num r" style="font-size:12.5px;">${fmtStock(r)}</div>` },
+      { key: 'seuil', label: 'Seuil', align: 'c',
+        cell: (r) => `<div class="stepper" data-seuil="${r.id}">
+          <button data-dir="-1">–</button><span class="val">${num(r.seuil, 0)}</span><button data-dir="1">+</button></div>` },
+      { key: 'par_target', label: 'Cible', align: 'c',
+        cell: (r) => `<div class="stepper" data-par="${r.id}">
+          <button data-dir="-1">–</button><span class="val">${num(r.par_target, 0)}</span><button data-dir="1">+</button></div>` },
+      { key: 'achat_ht', label: 'Achat HT', align: 'c',
+        cell: (r) => `<input class="input num" data-achat="${r.id}" value="${num(r.achat_ht, 2)}" aria-label="Prix d'achat">` },
+      { key: 'marge', label: 'Marge %', align: 'c',
+        cell: (r) => `<input class="input num" data-marge="${r.id}" value="${num(r.marge, 0)}" aria-label="Marge">` },
+      { key: 'low', label: 'Statut', align: 'r',
+        cell: (r) => (r.low
+          ? '<div class="chip-low">SOUS SEUIL</div>'
+          : '<div class="num r" style="font-size:10.5px; color:var(--ok-ink); justify-self:end;">suffisant</div>') },
+      { key: 'actions', label: '', sortable: false,
+        cell: (r) => `<div class="row" style="gap:5px; justify-self:end;">
+          <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer">ÉD</button>
+          <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button></div>` },
+    ],
+    // Ici la question est « qu'est-ce que je dois racheter, et pour combien ».
+    summary: (picked, _rows, masquees) => {
+      const valeur = picked.reduce((a, r) => a + (r.valeur || 0), 0);
+      const sous = picked.filter((r) => r.low).length;
+      const aCommander = picked.reduce(
+        (a, r) => a + (r.stock <= r.seuil ? Math.ceil(Math.max(r.par_target - r.stock, 0)) : 0), 0
+      );
+      const cout = picked.reduce((a, r) => a + (r.stock <= r.seuil
+        ? Math.ceil(Math.max(r.par_target - r.stock, 0)) * r.achat_ht : 0), 0);
       return `
-    <div class="trow" style="${UGRID} padding:11px 20px;">
-      <div class="cell-main">
-        <div class="nom">${esc(r.nom)}</div>
-        <div class="sub">${esc(r.marque)}</div>
+        <div class="sum-figs">
+          <span class="sum-count">${picked.length} retenue${picked.length > 1 ? 's' : ''}</span>
+          ${masquees ? `<span class="sum-hidden">+ ${masquees} hors filtre</span>` : ''}
+          <span>Valeur HT <b class="num">${eur(valeur)}</b></span>
+          <span>Sous le seuil <b class="num">${sous}</b></span>
+          <span>À commander <b class="num">${aCommander} bouteille${aCommander > 1 ? 's' : ''}</b></span>
+          <span>Coût du réassort <b class="num">${eur(cout)}</b></span>
+        </div>
+        <div class="row" style="gap:8px;">
+          ${picked.length ? '<button class="btn" data-bulk>Modifier la sélection</button>' : ''}
+          <button class="btn muted" data-unpick>Tout décocher</button>
+        </div>`;
+    },
+    bindSummary: (bar, picked) => {
+      bar.querySelector('[data-bulk]')?.addEventListener('click', () =>
+        openBulkModal({ refs: picked, onDone: () => render(el) })
+      );
+      bar.querySelector('[data-unpick]').addEventListener('click', () => {
+        tableState(T_SUIVIES).selected.clear();
+        render(el);
+      });
+    },
+    empty: `<div class="empty-note">Aucune référence suivie : créez-en avec « + Référence »
+      ou déposez un fichier ci-contre.</div>`,
+    foot: `<span>Modifier un prix d’achat recalcule aussitôt le coût par dose et le prix conseillé.</span>
+      <span>${tracked.length} références · ${low} sous seuil</span>`,
+  };
+
+  const garnituresSpec = {
+    id: T_GARNITURES,
+    defaultSort: 'nom',
+    grid: UGRID,
+    select: true,
+    rows: untracked,
+    columns: [
+      {
+        key: 'nom',
+        label: 'Garniture, épice, aromate',
+        cell: (r) => `<div class="cell-main"><div class="nom">${esc(r.nom)}</div>
+          <div class="sub">${esc(r.marque)}</div></div>`,
+      },
+      { key: 'unite', label: 'Unité',
+        cell: (r) => `<div style="font-size:12.5px; color:var(--mut);">${esc(r.unite)}</div>` },
+      { key: 'cout_dose', label: 'Coût unitaire', align: 'r',
+        cell: (r) => `<div class="num r accent" style="font-size:12.5px;">${eur(r.cout_dose)}</div>` },
+      { key: 'created_at', label: 'Créée le', align: 'r',
+        cell: (r) => `<div class="num r created-at">${r.created_at.slice(0, 10)}</div>` },
+      { key: 'actions', label: '', sortable: false,
+        cell: (r) => `<div class="row" style="gap:5px; justify-self:end;">
+          <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer">ÉD</button>
+          <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button></div>` },
+    ],
+    summary: (picked) => `
+      <div class="sum-figs">
+        <span class="sum-count">${picked.length} retenue${picked.length > 1 ? 's' : ''}</span>
+        <span>Coût unitaire cumulé <b class="num">${eur(picked.reduce((a, r) => a + r.cout_dose, 0))}</b></span>
+        <span>Coût moyen <b class="num">${eur(picked.reduce((a, r) => a + r.cout_dose, 0) / picked.length)}</b></span>
       </div>
-      <div style="font-size:12.5px; color:var(--mut);">${esc(r.unite)}</div>
-      <div class="num r accent" style="font-size:12.5px;">${eur(r.cout_dose)}</div>
-      <div class="num r created-at">${r.created_at.slice(0, 10)}</div>
-      <div class="row" style="gap:5px; justify-self:end;">
-        <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer">ÉD</button>
-        <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button>
-      </div>
-    </div>`;
-    }).join('');
+      <div class="row"><button class="btn muted" data-unpick>Tout décocher</button></div>`,
+    bindSummary: (bar) => {
+      bar.querySelector('[data-unpick]').addEventListener('click', () => {
+        tableState(T_GARNITURES).selected.clear();
+        render(el);
+      });
+    },
+    empty: `<div class="empty-note">Aucune garniture : elles servent uniquement à chiffrer
+      les fiches cocktails.</div>`,
+    foot: `<span class="pretty">Ni stock, ni seuil, ni inventaire : ces références servent
+      uniquement à chiffrer les fiches cocktails.</span>`,
+  };
 
   el.innerHTML = `
   <div style="display:grid; grid-template-columns:1fr 320px; gap:18px; align-items:start;">
@@ -82,20 +154,7 @@ export async function render(el) {
           <div class="serif-title">Maintien du stock</div>
           <div style="font-size:12.5px; color:var(--mut3);">Seuil d’alerte, stock cible, prix d’achat et marge</div>
         </div>
-        <div class="thead" style="${GRID}">
-          ${sortHeader('Référence', 'nom', SORT)}
-          ${sortHeader('Stock', 'stock', SORT, { align: 'r' })}
-          ${sortHeader('Seuil', 'seuil', SORT, { align: 'c' })}
-          ${sortHeader('Cible', 'par_target', SORT, { align: 'c' })}
-          ${sortHeader('Achat HT', 'achat_ht', SORT, { align: 'c' })}
-          ${sortHeader('Marge %', 'marge', SORT, { align: 'c' })}
-          ${sortHeader('Statut', 'low', SORT, { align: 'r' })}<div></div>
-        </div>
-        ${trackedBody}
-        <div class="panel-foot">
-          <span>Modifier un prix d’achat recalcule aussitôt le coût par dose et le prix conseillé.</span>
-          <span>${tracked.length} références · ${low} sous seuil</span>
-        </div>
+        <div data-suivies></div>
       </div>
 
       <div class="panel">
@@ -103,15 +162,7 @@ export async function render(el) {
           <div class="serif-title">Références non suivies</div>
           <button class="btn" data-new-untracked>+ Garniture</button>
         </div>
-        <div class="thead" style="${UGRID}">
-          ${sortHeader('Garniture, épice, aromate', 'nom', USORT)}
-          ${sortHeader('Unité', 'unite', USORT)}
-          ${sortHeader('Coût unitaire', 'cout_dose', USORT, { align: 'r' })}
-          ${sortHeader('Créée le', 'created_at', USORT, { align: 'r' })}<div></div>
-        </div>
-        ${untrackedBody}
-        <div class="panel-foot"><span class="pretty">Ni stock, ni seuil, ni inventaire : ces références
-          servent uniquement à chiffrer les fiches cocktails.</span></div>
+        <div data-garnitures></div>
       </div>
     </div>
 
@@ -137,10 +188,12 @@ export async function render(el) {
 
   // ---------- liaisons table ----------
 
-  // deux tables, deux états de tri : on borne chaque liaison à son en-tête
-  const theads = el.querySelectorAll('.thead');
-  if (theads[0]) bindSort(theads[0], SORT, () => render(el));
-  if (theads[1]) bindSort(theads[1], USORT, () => render(el));
+  const suiviesEl = el.querySelector('[data-suivies]');
+  const garnituresEl = el.querySelector('[data-garnitures]');
+  renderTable(suiviesEl, suiviesSpec);
+  bindTable(suiviesEl, suiviesSpec, () => render(el));
+  renderTable(garnituresEl, garnituresSpec);
+  bindTable(garnituresEl, garnituresSpec, () => render(el));
 
   el.querySelectorAll('[data-seuil]').forEach((n) =>
     n.querySelectorAll('button').forEach((b) =>
