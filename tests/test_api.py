@@ -218,3 +218,9 @@ def test_health_carries_the_build_stamp(client):
     h = client.get("/api/health").json()
     assert h["version"]
     assert len(h["build"]) == 10  # AAAA-MM-JJ
+
+
+def test_stock_rows_carry_created_at(client):
+    make_ref(client)
+    row = client.get("/api/stock").json()["refs"][0]
+    assert row["created_at"]

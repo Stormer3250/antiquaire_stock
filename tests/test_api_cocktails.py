@@ -132,3 +132,8 @@ def test_cocktail_cost_respects_the_reference_cascade(client):
         ]
 
     assert cost_of(dom) < cost_of(plain)
+
+
+def test_cocktail_rows_carry_created_at(client):
+    client.post("/api/cocktails", json={})
+    assert client.get("/api/cocktails").json()["cocktails"][0]["created_at"]

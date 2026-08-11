@@ -71,6 +71,7 @@ def serialize_ref(ref: dict, cat: dict, settings: dict, niveau: float) -> dict:
         "regime": regime,
         "regime_custom": ref["regime"] is not None,
         "dom": bool(ref["dom"]),
+        "created_at": ref["created_at"],
     }
     if not suivi:
         out.update(

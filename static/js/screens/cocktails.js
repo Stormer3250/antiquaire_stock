@@ -4,15 +4,17 @@ import { apiGet, apiSend } from '../api.js';
 import { esc, eur, num, pc, confirmModal, alertModal } from '../ui.js';
 import { S, refresh, lieuQuery, lieuLabel } from '../app.js';
 import { openRefModal } from '../refmodal.js';
+import { sortState, applySort, bindSort } from '../sortable.js';
 
 let sel = null;  // fiche sélectionnée (persiste pendant la session)
+const SORT = sortState('nom');   // ordre de la colonne de gauche
 
 export async function render(el) {
   const [cocktailsData, stockData] = await Promise.all([
     apiGet(`/api/cocktails?lieu=${lieuQuery()}`),
     apiGet(`/api/stock`),
   ]);
-  const cocktails = cocktailsData.cocktails;
+  const cocktails = applySort(cocktailsData.cocktails, SORT);
   const refs = stockData.refs;
   const pr = S.meta.pricing;
   const c = cocktails.find((x) => x.id === sel) || cocktails[0] || null;
@@ -28,8 +30,16 @@ export async function render(el) {
 
   const listHtml = `
   <div class="panel">
-    <div style="padding:14px 18px; border-bottom:1px solid var(--line);" class="mono-label">
-      Carte · ${cocktails.length} fiche${cocktails.length > 1 ? 's' : ''}</div>
+    <div style="padding:14px 18px; border-bottom:1px solid var(--line); display:flex;
+      flex-direction:column; gap:9px;">
+      <div class="mono-label">Carte · ${cocktails.length} fiche${cocktails.length > 1 ? 's' : ''}</div>
+      <div class="row" style="gap:6px; flex-wrap:wrap;">
+        ${[['nom', 'Nom'], ['prix_ttc', 'Prix'], ['marge', 'Marge'], ['created_at', 'Créée le']]
+          .map(([k, label]) => `<button class="chip-sort ${SORT.key === k ? 'active' : ''}"
+            data-sort="${k}">${label}${SORT.key === k ? (SORT.dir === 'asc' ? ' ↑' : ' ↓') : ''}</button>`)
+          .join('')}
+      </div>
+    </div>
     ${cocktails.map((x) => `
     <div class="row" style="border-left:2px solid ${c && x.id === c.id ? 'var(--ac)' : 'transparent'};
       border-bottom:1px solid var(--line2); background:${c && x.id === c.id ? 'var(--panel2)' : 'transparent'}; gap:0;">
@@ -166,6 +176,7 @@ export async function render(el) {
 
   // ---------- liaisons ----------
 
+  bindSort(el, SORT, () => render(el));
   el.querySelectorAll('[data-pick]').forEach((b) =>
     b.addEventListener('click', () => { sel = Number(b.dataset.pick); render(el); })
   );

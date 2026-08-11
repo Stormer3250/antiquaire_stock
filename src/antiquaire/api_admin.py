@@ -82,6 +82,7 @@ def serialize_cocktail(
         "famille": cocktail["famille"],
         "verre": cocktail["verre"],
         "description": cocktail["description"],
+        "created_at": cocktail["created_at"],
         "prix_ttc": prix,
         "ings": ings,
         "cost": cost,
