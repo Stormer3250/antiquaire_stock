@@ -5,6 +5,8 @@ import { apiGet, apiSend } from '../api.js';
 import { esc, eur, num, pc, confirmModal, alertModal, openModal, closeModal } from '../ui.js';
 import { S } from '../app.js';
 import { renderTable, bindTable, tableState } from '../table.js';
+import { openOptimiser } from '../optimiser.js';
+import { exporter } from '../export.js';
 
 let selMenu = null;    // menu ouvert
 let selTarif = null;   // tarification affichée dans la colonne des prix
@@ -194,6 +196,7 @@ export async function render(el) {
         </button>
         <div class="tarif-actions">
           ${t.actif ? '' : `<button class="icon-btn" data-activer="${t.id}" title="Appliquer cette tarification">APPL</button>`}
+          <button class="icon-btn" data-regler="${t.id}" title="Régler les prix sous contraintes">RÉG</button>
           <button class="icon-btn" data-dupliquer="${t.id}" title="Dupliquer">DUP</button>
           <button class="icon-btn" data-renommer="${t.id}" title="Renommer">REN</button>
           <button class="icon-btn danger" data-del-tarif="${t.id}" title="Supprimer">×</button>
@@ -221,6 +224,7 @@ export async function render(el) {
           <div class="row" style="gap:9px; align-items:center;">
             <span class="mono-label" style="color:var(--mut3);">
               ${tarif ? `prix de « ${esc(tarif.nom)} »${tarif.actif ? '' : ', non appliquée'}` : 'prix propres aux fiches'}</span>
+            <button class="btn" data-export>Exporter</button>
             <button class="btn" data-ajouter>+ Ajouter des fiches</button>
           </div>
         </div>
@@ -270,6 +274,16 @@ export async function render(el) {
   el.querySelector('[data-ajouter]').addEventListener('click', () =>
     ajouterFiches(menu, data.hors_menu, rafraichir)
   );
+  el.querySelector('[data-export]').addEventListener('click', () =>
+    exporter({
+      titre: menu.nom,
+      fichier: `menu-${menu.nom}`,
+      colonnes: ['Fiche', 'Famille', 'Coût matière', 'Prix TTC', 'Marge %', 'Marge cible %'],
+      lignes: menu.cocktails.map((c) => [
+        c.nom, c.famille, c.cost, prixDe(c), margeDe(c), c.marge_cible,
+      ]),
+    })
+  );
 
   // ---------- tarifications ----------
 
@@ -286,6 +300,13 @@ export async function render(el) {
       await apiSend('PATCH', `/api/tarifs/${b.dataset.activer}`, { actif: true });
       selTarif = Number(b.dataset.activer);
       await rafraichir();
+    })
+  );
+  el.querySelectorAll('[data-regler]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const t = tarifs.find((x) => x.id === Number(b.dataset.regler));
+      selTarif = t.id;
+      openOptimiser({ tarif: t, onApplied: rafraichir });
     })
   );
   el.querySelectorAll('[data-dupliquer]').forEach((b) =>

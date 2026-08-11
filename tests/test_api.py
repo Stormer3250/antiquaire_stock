@@ -224,3 +224,46 @@ def test_stock_rows_carry_created_at(client):
     make_ref(client)
     row = client.get("/api/stock").json()["refs"][0]
     assert row["created_at"]
+
+
+# ---------- barème daté ----------
+
+
+def test_rates_come_from_the_dated_bareme(client):
+    taux = {t["code"]: t for t in client.get("/api/taux").json()["taux"]}
+    assert taux["accise"]["valeur"] == 1954
+    assert taux["accise"]["effet_le"] == "2000-01-01"
+
+
+def test_a_new_rate_applies_from_its_date_and_keeps_the_old_one(client):
+    client.post(
+        "/api/taux",
+        json={"code": "accise", "valeur": 2100, "effet_le": "2026-01-01", "note": "LF 2026"},
+    )
+    # le taux courant est le plus récent entré en vigueur
+    assert client.get("/api/state").json()["rates"]["accise"] == 2100
+    # l'ancien reste consultable, et s'applique toujours à sa période
+    hist = [t for t in client.get("/api/taux").json()["taux"] if t["code"] == "accise"]
+    assert len(hist) == 2
+    assert client.get("/api/state?le=2025-06-01").json()["rates"]["accise"] == 1954
+    assert client.get("/api/state?le=2026-06-01").json()["rates"]["accise"] == 2100
+
+
+def test_a_future_rate_does_not_apply_yet(client):
+    client.post("/api/taux", json={"code": "accise", "valeur": 3000, "effet_le": "2099-01-01"})
+    assert client.get("/api/state").json()["rates"]["accise"] == 1954
+
+
+def test_a_dated_rate_changes_the_duty_of_a_reference(client):
+    rid = make_ref(client)
+    avant = client.get(f"/api/refs/{rid}").json()["fiscal"]["accise"]
+    client.post("/api/taux", json={"code": "accise", "valeur": 3908, "effet_le": "2020-01-01"})
+    apres = client.get(f"/api/refs/{rid}").json()["fiscal"]["accise"]
+    assert abs(apres - 2 * avant) < 1e-6
+
+
+def test_deleting_a_rate_falls_back_to_the_previous_one(client):
+    r = client.post("/api/taux", json={"code": "accise", "valeur": 2100, "effet_le": "2026-01-01"})
+    assert client.get("/api/state").json()["rates"]["accise"] == 2100
+    client.delete(f"/api/taux/{r.json()['id']}")
+    assert client.get("/api/state").json()["rates"]["accise"] == 1954

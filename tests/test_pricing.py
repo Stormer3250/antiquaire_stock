@@ -153,3 +153,92 @@ def test_cost_per_dose_accepts_dom():
         30, 70, 5, droits_inclus=False, regime="spiritueux", abv=40, rates=RATES_DOM, dom=True
     )
     assert reduced < plain
+
+
+# ---------- moteur de tarification ----------
+
+
+def lot(*prix, cost=2.0, cible=80.0, verrous=()):
+    return [
+        {
+            "id": i,
+            "nom": f"F{i}",
+            "cost": cost,
+            "marge_cible": cible,
+            "tva_pct": 20,
+            "prix_actuel": p,
+            "verrouille": i in verrous,
+        }
+        for i, p in enumerate(prix)
+    ]
+
+
+def prix_de(res):
+    return [round(li["prix_apres"], 2) for li in res["lines"]]
+
+
+def test_optimize_sans_contrainte_vise_la_marge_de_chaque_fiche():
+    res = pricing.optimize(lot(9.0, 30.0, cost=2.0, cible=80.0), {"arrondi": 0.5})
+    # coût 2 € et marge 80 % ⇒ HT 10 €, TTC 12 €
+    assert prix_de(res) == [12.0, 12.0]
+    assert res["violations"] == []
+
+
+def test_optimize_borne_par_prix_mini_et_maxi():
+    res = pricing.optimize(
+        lot(9.0, 9.0, cost=2.0), {"arrondi": 0.5, "prix_min": 14, "prix_max": 20}
+    )
+    assert prix_de(res) == [14.0, 14.0]
+    res = pricing.optimize(lot(9.0, cost=8.0), {"arrondi": 0.5, "prix_max": 20})
+    assert prix_de(res) == [20.0]
+
+
+def test_optimize_resserre_l_ecart():
+    items = lot(0, 0, 0, cost=1.0) + lot(0, cost=9.0)
+    for i, it in enumerate(items):
+        it["id"] = i
+    res = pricing.optimize(items, {"arrondi": 0.5, "ecart_max": 3})
+    p = prix_de(res)
+    assert max(p) - min(p) <= 3.0 + 1e-9
+
+
+def test_optimize_atteint_la_marge_moyenne_visee():
+    items = lot(0, 0, 0, cost=2.0) + lot(0, cost=5.0)
+    for i, it in enumerate(items):
+        it["id"] = i
+    res = pricing.optimize(items, {"arrondi": 0.01, "marge_moyenne": 70})
+    marges = [li["marge_apres"] for li in res["lines"]]
+    assert abs(sum(marges) / len(marges) - 70) < 0.5
+    assert res["violations"] == []
+
+
+def test_optimize_ne_touche_pas_une_fiche_verrouillee():
+    res = pricing.optimize(lot(18.0, 9.0, cost=2.0, verrous={0}), {"arrondi": 0.5})
+    assert res["lines"][0]["prix_apres"] == 18.0
+    assert res["lines"][0]["verrouille"] is True
+    assert res["lines"][1]["prix_apres"] == 12.0
+
+
+def test_optimize_signale_ce_qu_il_ne_peut_pas_tenir():
+    """Une fiche figée hors des bornes rend la contrainte intenable : on le dit."""
+    res = pricing.optimize(lot(30.0, 9.0, cost=2.0, verrous={0}), {"arrondi": 0.5, "prix_max": 15})
+    assert any("figé" in v for v in res["violations"])
+    assert res["lines"][0]["prix_apres"] == 30.0  # on ne la déplace pas pour autant
+
+
+def test_optimize_signale_une_marge_moyenne_hors_de_portee():
+    res = pricing.optimize(
+        lot(0, 0, cost=2.0), {"arrondi": 0.5, "marge_moyenne": 95, "prix_max": 12}
+    )
+    assert any("marge moyenne" in v for v in res["violations"])
+
+
+def test_optimize_signale_les_fiches_sous_le_plancher():
+    res = pricing.optimize(lot(0, cost=5.0), {"arrondi": 0.5, "prix_max": 12, "plancher": 75})
+    assert any("plancher" in v for v in res["violations"])
+
+
+def test_optimize_sur_un_menu_vide():
+    res = pricing.optimize([], {"arrondi": 0.5, "marge_moyenne": 80})
+    assert res["lines"] == []
+    assert res["violations"] == []

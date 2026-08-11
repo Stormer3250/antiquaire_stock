@@ -118,3 +118,145 @@ def order_suggestions(rows: list[dict]) -> list[dict]:
             {"nom": r["nom"], "stock": r["stock"], "seuil": r["seuil"], "quantite": qty}
         )
     return [{"fournisseur": f, "lines": lines} for f, lines in sorted(groups.items())]
+
+
+# ---------- moteur de tarification d'un menu ----------
+
+
+def _marge(cost: float, ttc: float, tva_pct: float) -> float:
+    return real_margin(cost, ttc, tva_pct)
+
+
+def optimize(items: list[dict], constraints: dict) -> dict:
+    """Propose un prix par fiche sous contraintes. Ne décide rien, ne récrit rien.
+
+    `items` : id, nom, cost, marge_cible, tva_pct, prix_actuel, verrouille.
+    `constraints` : prix_min, prix_max, marge_moyenne, ecart_max, arrondi, plancher.
+    Toutes facultatives ; absente signifie « pas de contrainte ».
+
+    Renvoie {lines, resume, violations}. `violations` nomme ce qui n'a PAS pu être tenu :
+    rendre un résultat approché en silence serait pire que le dire.
+    """
+    step = constraints.get("arrondi") or 0
+    pmin = constraints.get("prix_min")
+    pmax = constraints.get("prix_max")
+    ecart_max = constraints.get("ecart_max")
+    cible_moy = constraints.get("marge_moyenne")
+    plancher = constraints.get("plancher")
+
+    def clamp(p: float) -> float:
+        if pmin is not None:
+            p = max(p, pmin)
+        if pmax is not None:
+            p = min(p, pmax)
+        return round_price(p, step)
+
+    prix: dict = {}
+    for it in items:
+        if it.get("verrouille"):
+            prix[it["id"]] = it["prix_actuel"]  # figée : on n'y touche pas
+        else:
+            prix[it["id"]] = clamp(
+                price_for_margin(it["cost"], it["marge_cible"], it["tva_pct"], step)
+            )
+
+    libres = [it for it in items if not it.get("verrouille")]
+
+    # 2. resserrer l'écart entre la moins chère et la plus chère
+    if ecart_max is not None and items:
+        for _ in range(12):
+            vals = list(prix.values())
+            span = max(vals) - min(vals)
+            if span <= ecart_max + 1e-9 or not libres:
+                break
+            milieu = sum(vals) / len(vals)
+            facteur = ecart_max / span if span else 1
+            for it in libres:
+                prix[it["id"]] = clamp(milieu + (prix[it["id"]] - milieu) * facteur)
+
+    # 3. viser la marge moyenne : un seul multiplicateur sur les prix HT, trouvé par
+    # dichotomie. La marge moyenne croît avec le multiplicateur, donc ça converge.
+    def moyenne_avec(facteur: float) -> float:
+        total = 0.0
+        for it in items:
+            p = prix[it["id"]] if it.get("verrouille") else clamp(prix[it["id"]] * facteur)
+            total += _marge(it["cost"], p, it["tva_pct"])
+        return total / len(items)
+
+    if cible_moy is not None and items and libres:
+        bas, haut = 0.2, 5.0
+        for _ in range(40):
+            milieu = (bas + haut) / 2
+            if moyenne_avec(milieu) < cible_moy:
+                bas = milieu
+            else:
+                haut = milieu
+        facteur = (bas + haut) / 2
+        for it in libres:
+            prix[it["id"]] = clamp(prix[it["id"]] * facteur)
+
+    lines = []
+    for it in items:
+        avant, apres = it["prix_actuel"], prix[it["id"]]
+        lines.append(
+            {
+                "id": it["id"],
+                "nom": it["nom"],
+                "cost": it["cost"],
+                "verrouille": bool(it.get("verrouille")),
+                "prix_avant": avant,
+                "prix_apres": apres,
+                "delta": apres - avant,
+                "marge_avant": _marge(it["cost"], avant, it["tva_pct"]),
+                "marge_apres": _marge(it["cost"], apres, it["tva_pct"]),
+            }
+        )
+
+    violations = []
+    figees_hors_bornes = [
+        li["nom"]
+        for li in lines
+        if li["verrouille"]
+        and (
+            (pmin is not None and li["prix_apres"] < pmin)
+            or (pmax is not None and li["prix_apres"] > pmax)
+        )
+    ]
+    if figees_hors_bornes:
+        violations.append("prix figé hors des bornes demandées : " + ", ".join(figees_hors_bornes))
+    if lines:
+        vals = [li["prix_apres"] for li in lines]
+        span = max(vals) - min(vals)
+        if ecart_max is not None and span > ecart_max + 0.01:
+            violations.append(
+                f"écart maximal de {ecart_max:.2f} € impossible à tenir, il reste {span:.2f} €"
+            )
+        moyenne = sum(li["marge_apres"] for li in lines) / len(lines)
+        if cible_moy is not None and abs(moyenne - cible_moy) > 0.5:
+            violations.append(
+                f"marge moyenne visée de {cible_moy:.1f} % hors de portée, "
+                f"le meilleur possible est {moyenne:.1f} %"
+            )
+        basses = [
+            li["nom"] for li in lines if plancher is not None and li["marge_apres"] < plancher
+        ]
+        if basses:
+            violations.append("sous le plancher de marge : " + ", ".join(basses))
+
+    resume = {"n": len(lines), "changees": sum(1 for li in lines if abs(li["delta"]) >= 0.01)}
+    if lines:
+        vals = [li["prix_apres"] for li in lines]
+        avants = [li["prix_avant"] for li in lines]
+        resume.update(
+            {
+                "marge_avant": sum(li["marge_avant"] for li in lines) / len(lines),
+                "marge_apres": sum(li["marge_apres"] for li in lines) / len(lines),
+                "ecart_avant": max(avants) - min(avants),
+                "ecart_apres": max(vals) - min(vals),
+                "prix_moyen_apres": sum(vals) / len(vals),
+                "sous_plancher": sum(
+                    1 for li in lines if plancher is not None and li["marge_apres"] < plancher
+                ),
+            }
+        )
+    return {"lines": lines, "resume": resume, "violations": violations}

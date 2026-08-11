@@ -9,7 +9,7 @@ import sqlite3
 
 from fastapi import APIRouter, Body, HTTPException
 
-from antiquaire import stock
+from antiquaire import pricing, stock
 from antiquaire.api import Conn, load_settings, parse_lieu
 from antiquaire.api_admin import active_prices, menu_of, serialize_cocktail
 
@@ -215,3 +215,85 @@ def tarif_delete(tid: int, conn: Conn):
     conn.execute("DELETE FROM tarifs WHERE id = ?", (tid,))
     conn.commit()
     return {"ok": True}
+
+
+CONTRAINTES = {"prix_min", "prix_max", "marge_moyenne", "ecart_max", "arrondi", "plancher"}
+
+
+def fiches_du_menu(conn: sqlite3.Connection, menu_id: int, lieu: str | None = None) -> list[dict]:
+    settings = load_settings(conn)
+    levels = stock.stock_levels(conn, parse_lieu(lieu))
+    prix_actifs, menus = active_prices(conn), menu_of(conn)
+    rows = conn.execute(
+        """SELECT c.* FROM menu_items mi JOIN cocktails c ON c.id = mi.cocktail_id
+           WHERE mi.menu_id = ? AND c.active = 1 ORDER BY mi.position, mi.id""",
+        (menu_id,),
+    ).fetchall()
+    return [serialize_cocktail(conn, dict(r), settings, levels, prix_actifs, menus) for r in rows]
+
+
+@router.post("/tarifs/{tid}/optimiser")
+def tarif_optimiser(tid: int, conn: Conn, body: dict = Body(default={})):
+    """Propose des prix. N'écrit RIEN : appliquer est un PATCH ordinaire, décidé après
+    lecture. C'est ce qui rend le garde-fou impossible à contourner par distraction."""
+    tarif = get_tarif_or_404(conn, tid)
+    settings = load_settings(conn)
+    pr = settings["pricing"]
+    prix_tarif = {
+        r["cocktail_id"]: r["prix_ttc"]
+        for r in conn.execute(
+            "SELECT cocktail_id, prix_ttc FROM tarif_prix WHERE tarif_id = ?", (tid,)
+        )
+    }
+    contraintes = {k: v for k, v in body.items() if k in CONTRAINTES and v not in (None, "")}
+    contraintes.setdefault("arrondi", pr["arrondi"])
+    contraintes.setdefault("plancher", pr["min"])
+
+    items = [
+        {
+            "id": f["id"],
+            "nom": f["nom"],
+            "cost": f["cost"],
+            "marge_cible": f["marge_cible"],
+            "tva_pct": 20,
+            "prix_actuel": prix_tarif.get(f["id"], f["prix_ttc"]),
+            "verrouille": f["prix_fixe"],
+        }
+        for f in fiches_du_menu(conn, tarif["menu_id"])
+    ]
+    return {"tarif": {"id": tid, "nom": tarif["nom"]}, **pricing.optimize(items, contraintes)}
+
+
+@router.get("/impact")
+def impact(conn: Conn):
+    """Quelles fiches sont passées sous le plancher au prix qu'on pratique aujourd'hui,
+    et quel ingrédient y pèse le plus. Aucune donnée nouvelle : on recalcule et on trie."""
+    settings = load_settings(conn)
+    plancher = settings["pricing"]["min"]
+    levels = stock.stock_levels(conn, None)
+    prix_actifs, menus = active_prices(conn), menu_of(conn)
+    rows = conn.execute("SELECT * FROM cocktails WHERE active = 1").fetchall()
+
+    touchees = []
+    for r in rows:
+        f = serialize_cocktail(conn, dict(r), settings, levels, prix_actifs, menus)
+        if f["marge"] >= plancher:
+            continue
+        pire = max(f["ings"], key=lambda i: i["cost"], default=None)
+        touchees.append(
+            {
+                "id": f["id"],
+                "nom": f["nom"],
+                "menu_id": f["menu_id"],
+                "menu_nom": f["menu_nom"],
+                "prix_ttc": f["prix_ttc"],
+                "cost": f["cost"],
+                "marge": f["marge"],
+                "marge_cible": f["marge_cible"],
+                "prix_conseille": f["suggested"],
+                "ingredient_lourd": pire["nom"] if pire else None,
+                "part_ingredient": (pire["cost"] / f["cost"] * 100) if pire and f["cost"] else 0,
+            }
+        )
+    touchees.sort(key=lambda x: x["marge"])
+    return {"plancher": plancher, "fiches": touchees}

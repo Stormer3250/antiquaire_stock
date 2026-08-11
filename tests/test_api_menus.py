@@ -113,3 +113,50 @@ def test_unknown_menu_and_tarif_are_404(client):
     assert client.patch("/api/menus/999", json={"nom": "x"}).status_code == 404
     assert client.patch("/api/tarifs/999", json={"nom": "x"}).status_code == 404
     assert client.delete("/api/menus/999").status_code == 404
+
+
+# ---------- moteur de tarification ----------
+
+
+def menu_de(client, prix):
+    ids = [fiche(client, f"F{i}", p) for i, p in enumerate(prix)]
+    rid = client.post(
+        "/api/refs",
+        json={"nom": "Gin", "categorie_id": 1, "vol_cl": 70, "abv": 40, "achat_ht": 21.0},
+    ).json()["id"]
+    for cid in ids:
+        client.patch(f"/api/cocktails/{cid}", json={"ings": [{"ref_id": rid, "qty": 5}]})
+    mid = client.post("/api/menus", json={"nom": "Carte"}).json()["id"]
+    client.patch(f"/api/menus/{mid}", json={"cocktail_ids": ids})
+    tid = client.post(f"/api/menus/{mid}/tarifs", json={"nom": "Essai"}).json()["id"]
+    return mid, tid, ids
+
+
+def test_optimiser_propose_sans_rien_ecrire(client):
+    mid, tid, ids = menu_de(client, [9, 25])
+    avant = client.get("/api/menus").json()["menus"][0]["tarifs"][0]["prix"]
+    r = client.post(f"/api/tarifs/{tid}/optimiser", json={"ecart_max": 2}).json()
+    assert len(r["lines"]) == 2
+    assert r["resume"]["changees"] >= 1
+    apres = client.get("/api/menus").json()["menus"][0]["tarifs"][0]["prix"]
+    assert apres == avant  # la proposition n'a rien touché
+
+
+def test_optimiser_respecte_un_prix_fige(client):
+    mid, tid, ids = menu_de(client, [9, 25])
+    client.patch(f"/api/cocktails/{ids[0]}", json={"prix_fixe": True})
+    r = client.post(f"/api/tarifs/{tid}/optimiser", json={"marge_moyenne": 85}).json()
+    ligne = next(li for li in r["lines"] if li["id"] == ids[0])
+    assert ligne["verrouille"] is True
+    assert ligne["prix_apres"] == ligne["prix_avant"]
+
+
+def test_impact_liste_les_fiches_sous_le_plancher(client):
+    mid, tid, ids = menu_de(client, [30, 3])  # la seconde est bradée
+    client.patch(f"/api/tarifs/{tid}", json={"actif": True})
+    r = client.get("/api/impact").json()
+    noms = [f["nom"] for f in r["fiches"]]
+    assert "F1" in noms and "F0" not in noms
+    touchee = r["fiches"][0]
+    assert touchee["ingredient_lourd"] == "Gin"
+    assert touchee["prix_conseille"] > touchee["prix_ttc"]

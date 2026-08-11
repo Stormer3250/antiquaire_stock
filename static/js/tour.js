@@ -15,6 +15,8 @@ const STEPS = {
       'Le total du stock au prix d’achat HT, pour le lieu choisi en haut à droite. Basculez entre Réserve et Comptoir pour voir la valeur de chacun.'],
     ['.kpi', 'Les quatre repères',
       'Combien de références ont du stock, la marge moyenne de la carte, combien de bouteilles sont passées sous leur seuil, et combien de fiches sont chiffrées.'],
+    ['.panel:last-child', 'Ce que les hausses d’achat ont fait céder',
+      'Les fiches passées sous le plancher de marge au prix pratiqué aujourd’hui, la plus basse en premier, avec l’ingrédient qui pèse le plus dans leur coût. Rien de nouveau en base : on recalcule et on trie.'],
     ['[data-goto-cave]', 'La cave crie famine',
       'Tout ce qui est tombé sous son seuil d’alerte, groupé par fournisseur, avec la quantité à commander pour revenir au stock cible. Le bouton mène au réglage des seuils.'],
   ],
@@ -53,6 +55,8 @@ const STEPS = {
       'Ce sont ceux de la tarification consultée à droite, même si elle n’est pas encore appliquée. La marge suit, ce qui permet d’essayer une grille avant de s’y engager.'],
     ['[data-new-tarif]', 'Tarifications',
       'Mêmes recettes, prix différents : une pour l’été, une pour l’happy hour, une en brouillon. « APPL » désigne celle qu’on pratique vraiment, et c’est elle que reprennent le comptoir et les marges.'],
+    ['[data-regler]', 'Régler les prix sous contraintes',
+      'Prix mini, prix maxi, marge moyenne visée, écart maximal entre la moins chère et la plus chère : le moteur propose un prix par fiche, respecte les prix figés, et dit ce qu’il n’a pas pu tenir. Rien n’est enregistré tant que vous n’avez pas appliqué.'],
     ['[data-comparer]', 'Comparer',
       'Deux tarifications côte à côte, prix et marge par fiche, écart mis en évidence, plus la moyenne de chacune.'],
   ],
@@ -65,7 +69,9 @@ const STEPS = {
   bareme: [
     ['.panel', 'Les taux',
       'Le droit d’accise des spiritueux s’applique à l’hectolitre d’alcool pur : dose × degré. Le rhum traditionnel des DOM a son propre taux réduit, à cocher sur la fiche de la bouteille. Le vin et la bière se taxent au volume de produit fini.'],
-    ['.panel:last-child', 'Effet sur la dose',
+    ['[data-nouveau-taux]', 'Un taux vaut à partir d’une date',
+      'Les droits changent chaque année. Un nouveau taux ne remplace pas l’ancien : il prend effet à sa date, l’ancien couvre la période qu’il a couverte, et re-chiffrer une carte de l’an dernier donne ce qu’elle coûtait l’an dernier.'],
+    ['.panel:nth-of-type(2)', 'Effet sur la dose',
       'Ce que chaque bouteille paie réellement pour une dose, et la part que cela représente dans son coût matière. Une référence marquée « ne contient pas d’alcool » n’apparaît ici qu’à zéro.'],
   ],
   config: [

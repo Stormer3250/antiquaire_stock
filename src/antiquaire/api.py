@@ -26,10 +26,30 @@ Conn = Annotated[sqlite3.Connection, Depends(get_conn)]
 # ---------- helpers ----------
 
 
-def load_settings(conn: sqlite3.Connection) -> dict:
-    return {
+def rates_at(conn: sqlite3.Connection, le: str | None = None) -> dict:
+    """Taux applicables à une date : pour chaque code, le dernier entré en vigueur avant.
+
+    Un taux d'accise n'est pas un nombre, c'est un nombre valable à partir d'une date.
+    Re-chiffrer une carte de l'an dernier doit donner ce qu'elle coûtait l'an dernier.
+    """
+    jour = le or stock.now()[:10]
+    rows = conn.execute(
+        """SELECT code, valeur FROM bareme_taux b WHERE effet_le <= ?
+           AND effet_le = (SELECT max(effet_le) FROM bareme_taux
+                           WHERE code = b.code AND effet_le <= ?)""",
+        (jour, jour),
+    )
+    return {r["code"]: r["valeur"] for r in rows}
+
+
+def load_settings(conn: sqlite3.Connection, le: str | None = None) -> dict:
+    out = {
         r["key"]: json.loads(r["value"]) for r in conn.execute("SELECT key, value FROM settings")
     }
+    # le barème daté fait foi ; les valeurs du fichier de réglages ne servent que de
+    # repli pour un code qui n'y aurait jamais été inscrit
+    out["rates"] = {**out.get("rates", {}), **rates_at(conn, le)}
+    return out
 
 
 def load_categories(conn: sqlite3.Connection) -> dict[int, dict]:
@@ -147,8 +167,8 @@ def get_ref_or_404(conn: sqlite3.Connection, ref_id: int) -> dict:
 
 
 @router.get("/state")
-def api_state(conn: Conn):
-    settings = load_settings(conn)
+def api_state(conn: Conn, le: str | None = None):
+    settings = load_settings(conn, le)
     return {
         "pricing": settings["pricing"],
         "rates": settings["rates"],
@@ -313,6 +333,60 @@ def movements_list(conn: Conn, ref: int | None = None, lieu: str | None = None, 
             conn, ref_id=ref, location_id=parse_lieu(lieu), limit=limit
         )
     }
+
+
+# ---------- barème daté ----------
+
+TAUX_CODES = {"accise", "accise_dom", "ss", "vin", "mousseux", "biere"}
+
+
+@router.get("/taux")
+def taux_list(conn: Conn):
+    rows = conn.execute("SELECT * FROM bareme_taux ORDER BY code, effet_le DESC").fetchall()
+    return {"taux": [dict(r) for r in rows], "courants": rates_at(conn)}
+
+
+@router.post("/taux")
+def taux_create(conn: Conn, body: dict = Body(...)):
+    code = body.get("code")
+    if code not in TAUX_CODES:
+        raise HTTPException(422, f"code de taux inconnu: {code}")
+    try:
+        valeur = float(body["valeur"])
+    except (KeyError, TypeError, ValueError) as e:
+        raise HTTPException(422, "valeur numérique obligatoire") from e
+    if valeur <= 0:
+        raise HTTPException(422, "un taux est strictement positif")
+    effet = str(body.get("effet_le") or stock.now()[:10])[:10]
+    if len(effet) != 10 or effet[4] != "-" or effet[7] != "-":
+        raise HTTPException(422, "date attendue au format AAAA-MM-JJ")
+    cur = conn.execute(
+        """INSERT INTO bareme_taux (code, valeur, effet_le, note, created_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(code, effet_le) DO UPDATE SET valeur = excluded.valeur,
+                                                     note = excluded.note""",
+        (code, valeur, effet, body.get("note", ""), stock.now()),
+    )
+    conn.commit()
+    row = conn.execute(
+        "SELECT id FROM bareme_taux WHERE code = ? AND effet_le = ?", (code, effet)
+    ).fetchone()
+    return {"id": row["id"] if row else cur.lastrowid}
+
+
+@router.delete("/taux/{taux_id}")
+def taux_delete(taux_id: int, conn: Conn):
+    row = conn.execute("SELECT * FROM bareme_taux WHERE id = ?", (taux_id,)).fetchone()
+    if not row:
+        raise HTTPException(404, "taux inconnu")
+    reste = conn.execute(
+        "SELECT count(*) FROM bareme_taux WHERE code = ?", (row["code"],)
+    ).fetchone()[0]
+    if reste <= 1:
+        raise HTTPException(422, "c'est le seul taux de ce code : corrigez-le plutôt")
+    conn.execute("DELETE FROM bareme_taux WHERE id = ?", (taux_id,))
+    conn.commit()
+    return {"ok": True}
 
 
 # ---------- health ----------

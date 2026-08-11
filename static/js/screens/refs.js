@@ -7,6 +7,7 @@ import { openRefModal } from '../refmodal.js';
 import { mountImportCard } from '../importcard.js';
 import { renderTable, bindTable, tableState } from '../table.js';
 import { openBulkModal } from '../bulkmodal.js';
+import { exporter } from '../export.js';
 
 const F = { query: '', cat: 'Tout' };  // filtres persistants pendant la session
 const TABLE = 'refs';                  // tri et sélection vivent dans table.js
@@ -166,6 +167,7 @@ export async function render(el) {
       </select>
     </div>
     <button class="btn" data-import style="padding:11px 14px;">Importer un fichier</button>
+    <button class="btn" data-export style="padding:11px 14px;">Exporter</button>
   </div>
   <div class="panel" data-table></div>`;
 
@@ -180,6 +182,23 @@ export async function render(el) {
   el.querySelector('[data-cat]').addEventListener('change', (e) => {
     F.cat = e.target.value;
     render(el);
+  });
+  el.querySelector('[data-export]').addEventListener('click', () => {
+    // ce qui part dans le fichier est ce qui est à l'écran : tri, filtre et sélection
+    const etat = tableState(TABLE);
+    const visibles = etat.selected.size
+      ? filtered.filter((r) => etat.selected.has(r.id))
+      : filtered;
+    exporter({
+      titre: 'Références',
+      fichier: 'references',
+      colonnes: ['Référence', 'Marque', 'Catégorie', 'Fournisseur', 'Degré', 'Volume cl',
+        'Stock', 'Valeur HT', 'Achat HT', 'Coût unitaire', 'Marge %', 'Prix conseillé', 'Créée le'],
+      lignes: visibles.map((r) => [
+        r.nom, r.marque, r.categorie_nom, r.fournisseur, r.abv, r.vol_cl,
+        r.stock, r.valeur, r.achat_ht, r.cout_dose, r.marge_reelle, r.prix, r.created_at.slice(0, 10),
+      ]),
+    });
   });
   el.querySelector('[data-import]').addEventListener('click', () => {
     const modal = openModal(`

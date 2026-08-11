@@ -240,6 +240,16 @@ def cocktail_delete(cid: int, conn: Conn):
 
 @router.patch("/settings")
 def settings_patch(conn: Conn, body: dict = Body(...)):
+    # Un taux modifié devient un taux daté d'aujourd'hui : l'ancien reste valable pour
+    # la période qu'il a couverte, et rien de ce qui a été chiffré avant ne bouge.
+    for code, valeur in (body.pop("rates", None) or {}).items():
+        conn.execute(
+            """INSERT INTO bareme_taux (code, valeur, effet_le, note, created_at)
+               VALUES (?, ?, ?, 'saisi depuis le barème', ?)
+               ON CONFLICT(code, effet_le) DO UPDATE SET valeur = excluded.valeur""",
+            (code, float(valeur), stock.now()[:10], stock.now()),
+        )
+    conn.commit()
     current = load_settings(conn)
     for key in ("pricing", "rates", "lists"):
         if key in body:

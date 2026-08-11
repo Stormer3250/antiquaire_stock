@@ -1,7 +1,7 @@
 // Barème fiscal : taux éditables + effet sur la dose pour les références réelles.
 
 import { apiGet, apiSend } from '../api.js';
-import { esc, eur, num, pc, parseNum } from '../ui.js';
+import { esc, eur, num, pc, parseNum, openModal, closeModal, confirmModal, alertModal } from '../ui.js';
 import { S, reloadMeta, lieuQuery } from '../app.js';
 
 const PARAMS = [
@@ -13,8 +13,17 @@ const PARAMS = [
   { key: 'biere', k: 'Bière', n: 'au hL et par degré alcoolique', unit: '€/hL/degré', d: 2 },
 ];
 
+const LABELS = {
+  accise: 'Accise · spiritueux', accise_dom: 'Accise · rhum des DOM',
+  ss: 'Cotisation sécurité sociale', vin: 'Vin tranquille',
+  mousseux: 'Vin mousseux', biere: 'Bière',
+};
+
 export async function render(el) {
-  const refsData = await apiGet(`/api/stock?lieu=${lieuQuery()}`);
+  const [refsData, tauxData] = await Promise.all([
+    apiGet(`/api/stock?lieu=${lieuQuery()}`),
+    apiGet('/api/taux'),
+  ]);
   const tracked = refsData.refs.filter((r) => r.suivi);
   const rates = S.meta.rates;
   // barème antérieur à la migration 002 : on retombe sur le taux métropolitain
@@ -63,7 +72,57 @@ export async function render(el) {
         }).join('')}
       <div class="panel-foot"><span>Taxe par dose</span><span>part du coût matière</span></div>
     </div>
+
+    <div class="panel" style="grid-column:1 / -1;">
+      <div class="panel-head">
+        <div>
+          <div class="serif-title">Historique du barème</div>
+          <div style="font-size:12.5px; color:var(--mut3); margin-top:3px;">Un taux vaut
+            à partir d’une date : re-chiffrer une carte de l’an dernier donne ce qu’elle
+            coûtait l’an dernier.</div>
+        </div>
+        <button class="btn" data-nouveau-taux>+ Nouveau taux</button>
+      </div>
+      <div class="thead" style="grid-template-columns:1.6fr .8fr .8fr 1.4fr 60px;">
+        <div>Taux</div><div class="r">Valeur</div><div class="r">À partir du</div>
+        <div>Note</div><div></div>
+      </div>
+      ${tauxData.taux.map((x) => {
+        const courant = tauxData.courants[x.code] === x.valeur;
+        return `
+        <div class="trow" style="grid-template-columns:1.6fr .8fr .8fr 1.4fr 60px; padding:9px 20px;">
+          <div style="font-size:12.5px;">${esc(LABELS[x.code] || x.code)}
+            ${courant ? '<span class="chip-actif" style="margin-left:6px;">EN VIGUEUR</span>' : ''}</div>
+          <div class="num r" style="font-size:12.5px;">${num(x.valeur, 2)}</div>
+          <div class="num r" style="font-size:12px; color:var(--mut);">${esc(x.effet_le)}</div>
+          <div style="font-size:11.5px; color:var(--mut3);">${esc(x.note)}</div>
+          <button class="icon-btn danger" data-del-taux="${x.id}" style="justify-self:end;"
+            aria-label="Supprimer ce taux">×</button>
+        </div>`;
+      }).join('')}
+      <div class="panel-foot"><span class="pretty">Modifier une valeur en haut de page crée
+        un taux valable à partir d’aujourd’hui : l’ancien reste, et couvre sa période.</span></div>
+    </div>
   </div>`;
+
+  el.querySelector('[data-nouveau-taux]').addEventListener('click', () => nouveauTaux(el));
+  el.querySelectorAll('[data-del-taux]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      const x = tauxData.taux.find((y) => y.id === Number(b.dataset.delTaux));
+      const ok = await confirmModal({
+        title: `Supprimer ce taux du ${x.effet_le} ?`,
+        body: 'Le taux précédent reprendra effet pour cette période.',
+      });
+      if (!ok) return;
+      try {
+        await apiSend('DELETE', `/api/taux/${x.id}`);
+      } catch (e) {
+        await alertModal({ title: 'Suppression refusée', body: e.message });
+      }
+      await reloadMeta();
+      await render(el);
+    })
+  );
 
   el.querySelectorAll('[data-rate]').forEach((inp) => {
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
@@ -75,5 +134,60 @@ export async function render(el) {
       await reloadMeta();
       await render(el);
     });
+  });
+}
+
+
+function nouveauTaux(el) {
+  const modal = openModal(`
+    <div class="modal-head">
+      <div class="serif-title">Nouveau taux</div>
+      <button class="modal-x" aria-label="Fermer">×</button>
+    </div>
+    <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+      <div class="field"><div class="mono-label">Taux</div>
+        <select class="input" data-code>
+          ${Object.entries(LABELS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}
+        </select></div>
+      <div class="field"><div class="mono-label">Valeur</div>
+        <input class="input num" data-valeur placeholder="ex. 2100"></div>
+      <div class="field"><div class="mono-label">À partir du</div>
+        <input class="input" type="date" data-effet></div>
+      <div class="field"><div class="mono-label">Note</div>
+        <input class="input" data-note placeholder="ex. loi de finances 2027"></div>
+    </div>
+    <div class="modal-foot">
+      <div class="modal-hint">Une date future est acceptée : le taux s’appliquera le jour venu.</div>
+      <div class="row">
+        <button class="btn muted" data-cancel>Annuler</button>
+        <button class="btn-solid" data-ok>Enregistrer</button>
+      </div>
+    </div>`, { width: 460 });
+
+  modal.querySelector('[data-cancel]').addEventListener('click', closeModal);
+  modal.querySelector('[data-ok]').addEventListener('click', async () => {
+    const valeur = parseNum(modal.querySelector('[data-valeur]').value);
+    const effet = modal.querySelector('[data-effet]').value;
+    if (valeur <= 0 || !effet) {
+      await alertModal({
+        title: 'Il manque quelque chose',
+        body: 'Une valeur strictement positive et une date de prise d’effet sont nécessaires.',
+      });
+      return;
+    }
+    try {
+      await apiSend('POST', '/api/taux', {
+        code: modal.querySelector('[data-code]').value,
+        valeur,
+        effet_le: effet,
+        note: modal.querySelector('[data-note]').value.trim(),
+      });
+    } catch (e) {
+      await alertModal({ title: 'Enregistrement impossible', body: e.message });
+      return;
+    }
+    closeModal();
+    await reloadMeta();
+    await render(el);
   });
 }

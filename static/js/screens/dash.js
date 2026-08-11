@@ -5,10 +5,11 @@ import { esc, eur, num, pc } from '../ui.js';
 import { S, go, lieuQuery, lieuLabel } from '../app.js';
 
 export async function render(el) {
-  const [stockData, ordersData, cocktailsData] = await Promise.all([
+  const [stockData, ordersData, cocktailsData, impactData] = await Promise.all([
     apiGet(`/api/stock?lieu=${lieuQuery()}`),
     apiGet(`/api/orders?lieu=${lieuQuery()}`),
     apiGet(`/api/cocktails?lieu=${lieuQuery()}`),
+    apiGet('/api/impact'),
   ]);
   const refs = stockData.refs.filter((r) => r.suivi);
   const cocktails = cocktailsData.cocktails;
@@ -51,6 +52,27 @@ export async function render(el) {
           </div>
           <div class="num accent" style="font-size:12.5px;">commander ${num(l.quantite, 0)}</div>
         </div>`).join('')}`).join('');
+
+  // Ce que les hausses de prix d'achat ont fait aux fiches : rien de nouveau en base,
+  // on recalcule au prix pratiqué aujourd'hui et on ne montre que ce qui a lâché.
+  const impact = impactData.fiches;
+  const impactPanel = impact.length === 0
+    ? `<div class="empty-note">Aucune fiche sous le plancher de ${pc(impactData.plancher)} :
+        les hausses de prix d’achat n’ont encore rien fait céder.</div>`
+    : impact.slice(0, 8).map((f) => `
+      <div class="trow" style="grid-template-columns:5px 1fr auto; padding:11px 20px;">
+        <div class="status-bar low" style="height:34px;"></div>
+        <div class="cell-main">
+          <div class="nom">${esc(f.nom)}</div>
+          <div class="sub">${esc(f.menu_nom || 'hors menu')}${f.ingredient_lourd
+            ? ` · ${esc(f.ingredient_lourd)} pèse ${pc(f.part_ingredient)} du coût` : ''}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="num warn-text" style="font-size:12.5px;">${pc(f.marge, 1)}</div>
+          <div class="num" style="font-size:11px; color:var(--mut3);">
+            ${eur(f.prix_ttc)} → ${eur(f.prix_conseille)}</div>
+        </div>
+      </div>`).join('');
 
   const marginsPanel = cocktails.length === 0
     ? `<div class="empty-note">Les fiches de <a href="#/cocktails">Cartes &amp; recettes</a> apparaîtront ici avec leur marge.</div>`
@@ -97,6 +119,15 @@ export async function render(el) {
       </div>
       ${marginsPanel}
     </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div class="serif-title">Ce que les hausses d’achat ont fait céder</div>
+      <div class="num" style="font-size:10.5px; color:var(--mut3);">
+        ${impact.length} fiche${impact.length > 1 ? 's' : ''} sous le plancher de ${pc(impactData.plancher)}</div>
+    </div>
+    ${impactPanel}
   </div>`;
 
   el.querySelector('[data-goto-cave]').addEventListener('click', () => go('#/cave'));
