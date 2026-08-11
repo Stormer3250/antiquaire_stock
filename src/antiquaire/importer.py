@@ -10,7 +10,7 @@ import uuid
 import openpyxl
 import openpyxl.styles
 import openpyxl.utils
-from fastapi import APIRouter, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Body, HTTPException, Response, UploadFile
 
 from antiquaire import stock
 from antiquaire.api import Conn
@@ -349,3 +349,39 @@ def import_apply(conn: Conn, body: dict):
 def imports_history(conn: Conn):
     rows = conn.execute("SELECT * FROM imports ORDER BY id DESC LIMIT 20").fetchall()
     return {"imports": [dict(r) for r in rows]}
+
+
+# ---------- export ----------
+
+
+@router.post("/export.xlsx")
+def export_xlsx(body: dict = Body(...)):
+    """Renvoie en .xlsx exactement ce que l'écran affiche.
+
+    Le client envoie ses colonnes et ses lignes : tri, filtre et sélection sont déjà
+    appliqués côté écran, et il n'y a aucune raison de réimplémenter cette logique ici
+    pour aboutir, un jour, à un export qui ne ressemble plus à la table.
+    """
+    colonnes = [str(c) for c in body.get("colonnes", [])]
+    lignes = body.get("lignes", [])
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = (body.get("titre") or "Export")[:31]
+    ws.append(colonnes)
+    for cell in ws[1]:
+        cell.font = openpyxl.styles.Font(bold=True)
+    for ligne in lignes:
+        ws.append(list(ligne))
+    for i, nom in enumerate(colonnes, start=1):
+        largeur = max([len(nom)] + [len(str(li[i - 1])) for li in lignes if len(li) >= i] or [8])
+        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = min(largeur + 3, 48)
+    ws.freeze_panes = "A2"
+
+    flux = io.BytesIO()
+    wb.save(flux)
+    nom_fichier = (body.get("fichier") or "export") + ".xlsx"
+    return Response(
+        content=flux.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{nom_fichier}"'},
+    )

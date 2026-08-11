@@ -224,3 +224,25 @@ def test_apply_unknown_token(client):
         json={"token": "nope", "mapping": {"0": "nom"}, "location_id": RESERVE, "categorie_id": 1},
     )
     assert r.status_code == 410
+
+
+def test_export_xlsx_renvoie_ce_qu_on_lui_donne(client):
+    r = client.post(
+        "/api/export.xlsx",
+        json={
+            "titre": "Références",
+            "fichier": "references",
+            "colonnes": ["Nom", "Prix"],
+            "lignes": [["Rhum", 24.9], ["Gin", 21.0]],
+        },
+    )
+    assert r.status_code == 200
+    assert "references.xlsx" in r.headers["content-disposition"]
+    import io
+
+    import openpyxl
+
+    ws = openpyxl.load_workbook(io.BytesIO(r.content)).active
+    assert ws.title == "Références"
+    assert [c.value for c in ws[1]] == ["Nom", "Prix"]
+    assert ws["A2"].value == "Rhum" and ws["B3"].value == 21.0
