@@ -5,6 +5,10 @@ import { esc, eur, num, parseNum, confirmModal } from '../ui.js';
 import { S, refresh, lieuQuery, fmtStock } from '../app.js';
 import { openRefModal } from '../refmodal.js';
 import { mountImportCard } from '../importcard.js';
+import { sortState, applySort, sortHeader, bindSort } from '../sortable.js';
+
+const SORT = sortState('nom');    // table des références suivies
+const USORT = sortState('nom');   // table des garnitures
 
 const GRID = 'grid-template-columns:2fr .7fr 1fr 1fr 1fr .8fr .8fr 66px;';
 const UGRID = 'grid-template-columns:2fr 1fr 1fr 1fr 66px;';
@@ -14,8 +18,10 @@ export async function render(el) {
     apiGet(`/api/stock?lieu=${lieuQuery()}`),
     apiGet('/api/imports'),
   ]);
-  const tracked = stockData.refs.filter((r) => r.suivi);
-  const untracked = stockData.refs.filter((r) => !r.suivi && r.categorie_nom !== 'Consommable');
+  const tracked = applySort(stockData.refs.filter((r) => r.suivi), SORT);
+  const untracked = applySort(
+    stockData.refs.filter((r) => !r.suivi && r.categorie_nom !== 'Consommable'), USORT
+  );
   const low = tracked.filter((r) => r.low).length;
 
   const patchRef = async (id, body) => {
@@ -60,7 +66,7 @@ export async function render(el) {
       </div>
       <div style="font-size:12.5px; color:var(--mut);">${esc(r.unite)}</div>
       <div class="num r accent" style="font-size:12.5px;">${eur(r.cout_dose)}</div>
-      <div class="num r" style="font-size:12px; color:var(--mut2);">—</div>
+      <div class="num r created-at">${r.created_at.slice(0, 10)}</div>
       <div class="row" style="gap:5px; justify-self:end;">
         <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer">ÉD</button>
         <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button>
@@ -77,8 +83,13 @@ export async function render(el) {
           <div style="font-size:12.5px; color:var(--mut3);">Seuil d’alerte, stock cible, prix d’achat et marge</div>
         </div>
         <div class="thead" style="${GRID}">
-          <div>Référence</div><div class="r">Stock</div><div class="c">Seuil</div><div class="c">Cible</div>
-          <div class="c">Achat HT</div><div class="c">Marge %</div><div class="r">Statut</div><div></div>
+          ${sortHeader('Référence', 'nom', SORT)}
+          ${sortHeader('Stock', 'stock', SORT, { align: 'r' })}
+          ${sortHeader('Seuil', 'seuil', SORT, { align: 'c' })}
+          ${sortHeader('Cible', 'par_target', SORT, { align: 'c' })}
+          ${sortHeader('Achat HT', 'achat_ht', SORT, { align: 'c' })}
+          ${sortHeader('Marge %', 'marge', SORT, { align: 'c' })}
+          ${sortHeader('Statut', 'low', SORT, { align: 'r' })}<div></div>
         </div>
         ${trackedBody}
         <div class="panel-foot">
@@ -93,7 +104,10 @@ export async function render(el) {
           <button class="btn" data-new-untracked>+ Garniture</button>
         </div>
         <div class="thead" style="${UGRID}">
-          <div>Garniture, épice, aromate</div><div>Unité</div><div class="r">Coût unitaire</div><div class="r"></div><div></div>
+          ${sortHeader('Garniture, épice, aromate', 'nom', USORT)}
+          ${sortHeader('Unité', 'unite', USORT)}
+          ${sortHeader('Coût unitaire', 'cout_dose', USORT, { align: 'r' })}
+          ${sortHeader('Créée le', 'created_at', USORT, { align: 'r' })}<div></div>
         </div>
         ${untrackedBody}
         <div class="panel-foot"><span class="pretty">Ni stock, ni seuil, ni inventaire : ces références
@@ -122,6 +136,11 @@ export async function render(el) {
   </div>`;
 
   // ---------- liaisons table ----------
+
+  // deux tables, deux états de tri : on borne chaque liaison à son en-tête
+  const theads = el.querySelectorAll('.thead');
+  if (theads[0]) bindSort(theads[0], SORT, () => render(el));
+  if (theads[1]) bindSort(theads[1], USORT, () => render(el));
 
   el.querySelectorAll('[data-seuil]').forEach((n) =>
     n.querySelectorAll('button').forEach((b) =>

@@ -3,6 +3,9 @@
 import { apiGet, apiSend } from '../api.js';
 import { esc, eur, num, confirmModal } from '../ui.js';
 import { S, go, refresh } from '../app.js';
+import { sortState, applySort, sortHeader, bindSort } from '../sortable.js';
+
+const SORT = sortState('nom');
 
 const LEVELS = [
   { v: 0, label: 'vide' },
@@ -37,7 +40,9 @@ export async function render(el) {
 
   const lieuId = S.lieu;
   const lieuNom = S.meta.locations.find((l) => l.id === lieuId)?.nom || '';
-  const refs = (await apiGet(`/api/stock?lieu=${lieuId}`)).refs.filter((r) => r.suivi);
+  const refs = applySort(
+    (await apiGet(`/api/stock?lieu=${lieuId}`)).refs.filter((r) => r.suivi), SORT
+  );
   const session = (sessions[lieuId] ||= new Map());
 
   const countedOf = (t) => t.fulls + (t.level ?? 0);
@@ -94,8 +99,10 @@ export async function render(el) {
   <div style="display:grid; grid-template-columns:1fr 300px; gap:18px; align-items:start;">
     <div class="panel">
       <div class="thead" style="grid-template-columns:2fr 1.6fr .8fr .8fr;">
-        <div>Référence</div><div>Niveau de la bouteille ouverte</div>
-        <div class="r">Pleines</div><div class="r">Compté</div>
+        ${sortHeader('Référence', 'nom', SORT)}
+        <div>Niveau de la bouteille ouverte</div>
+        ${sortHeader('Théorique', 'stock', SORT, { align: 'r' })}
+        <div class="r">Compté</div>
       </div>
       <div data-rows>${refs.map(rowHtml).join('')}</div>
     </div>
@@ -103,6 +110,8 @@ export async function render(el) {
       ${summaryHtml()}
     </div>
   </div>`;
+
+  bindSort(el, SORT, () => render(el));
 
   const rowsEl = el.querySelector('[data-rows]');
   const summaryEl = el.querySelector('[data-summary]');

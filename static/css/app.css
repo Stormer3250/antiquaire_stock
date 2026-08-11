@@ -334,3 +334,22 @@ select.input option { background: var(--input); color: var(--ink); }
 
 /* zone de dépôt survolée par un fichier */
 .drop-hot { border-color: var(--ac); background: var(--panel2); }
+
+/* ---------- en-têtes de table triables ---------- */
+.th-sort { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 5px; }
+.th-sort.r { justify-content: flex-end; }
+.th-sort.c { justify-content: center; }
+.th-sort:hover, .th-sort:focus-visible { color: var(--ink); outline: none; }
+.th-sort.active { color: var(--ac); }
+.th-arrow { font-size: 9px; opacity: .9; }
+.created-at { font-size: 10.5px; color: var(--mut3); white-space: nowrap; }
+.row-actions { align-items: center; }
+
+/* puces de tri de la colonne des fiches */
+.chip-sort {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  padding: 4px 8px; background: transparent; color: var(--mut3);
+  border: 1px solid var(--line2); cursor: pointer;
+}
+.chip-sort:hover { color: var(--ink); border-color: var(--line); }
+.chip-sort.active { color: var(--ac); border-color: var(--ac); }

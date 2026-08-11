@@ -5,10 +5,12 @@ import { esc, eur, num, pc, confirmModal, openModal } from '../ui.js';
 import { S, go, refresh, lieuQuery, fmtStock } from '../app.js';
 import { openRefModal } from '../refmodal.js';
 import { mountImportCard } from '../importcard.js';
+import { sortState, applySort, sortHeader, bindSort } from '../sortable.js';
 
 const F = { query: '', cat: 'Tout' };  // filtres persistants pendant la session
+const SORT = sortState('nom');         // tri persistant pendant la session
 
-const GRID = 'grid-template-columns:2.2fr .9fr .6fr .7fr .9fr .9fr .7fr .9fr 66px;';
+const GRID = 'grid-template-columns:2.2fr .9fr .5fr .6fr .8fr .8fr .6fr .8fr 150px;';
 
 export async function render(el) {
   const data = await apiGet(`/api/stock?lieu=${lieuQuery()}`);
@@ -20,6 +22,7 @@ export async function render(el) {
         || (F.cat === '__untracked' ? !r.suivi : String(r.categorie_id) === F.cat))
       && (q === '' || `${r.nom} ${r.marque} ${r.fournisseur}`.toLowerCase().includes(q))
   );
+  const sorted = applySort(filtered, SORT);
   const cats = S.meta.categories.filter((c) => c.nom !== 'Consommable');
   const pr = S.meta.pricing;
 
@@ -28,7 +31,7 @@ export async function render(el) {
         en haut, ou cliquez « Importer un fichier » pour charger votre catalogue Excel.</div>`
     : filtered.length === 0
       ? `<div class="empty-note">Aucune référence ne correspond à cette recherche.</div>`
-      : filtered.map((r) => `
+      : sorted.map((r) => `
       <div class="trow" style="${GRID}">
         <div class="row" data-open="${r.id}" style="cursor:pointer; min-width:0; gap:11px;">
           <div class="status-bar ${r.suivi ? (r.low ? 'low' : 'fine') : 'untracked'}"></div>
@@ -44,7 +47,8 @@ export async function render(el) {
         <div class="num r" style="font-size:12.5px; color:var(--mut);">${eur(r.cout_dose)}</div>
         <div class="num r" style="font-size:12px;">${r.suivi ? `<span class="${r.marge_reelle >= pr.min ? 'ok-text' : 'warn-text'}">${pc(r.marge_reelle)}</span>` : '—'}</div>
         <div class="num r accent" style="font-size:13px;" ${r.override ? 'title="Prix fixé à la main sur la fiche"' : ''}>${r.suivi ? eur(r.prix) + (r.override ? ' ·' : '') : '—'}</div>
-        <div class="row" style="gap:5px; justify-self:end;">
+        <div class="row row-actions" style="gap:5px; justify-self:end;">
+          <span class="num created-at">${r.created_at.slice(0, 10)}</span>
           <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer">ÉD</button>
           <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button>
         </div>
@@ -65,9 +69,15 @@ export async function render(el) {
   </div>
   <div class="panel">
     <div class="thead" style="${GRID}">
-      <div>Référence</div><div>Catégorie</div><div class="r">Degré</div><div class="r">Stock</div>
-      <div class="r">Valeur HT</div><div class="r">Coût unitaire</div><div class="r">Marge</div>
-      <div class="r">Prix conseillé</div><div></div>
+      ${sortHeader('Référence', 'nom', SORT)}
+      ${sortHeader('Catégorie', 'categorie_nom', SORT)}
+      ${sortHeader('Degré', 'abv', SORT, { align: 'r' })}
+      ${sortHeader('Stock', 'stock', SORT, { align: 'r' })}
+      ${sortHeader('Valeur HT', 'valeur', SORT, { align: 'r' })}
+      ${sortHeader('Coût unitaire', 'cout_dose', SORT, { align: 'r' })}
+      ${sortHeader('Marge', 'marge_reelle', SORT, { align: 'r' })}
+      ${sortHeader('Prix conseillé', 'prix', SORT, { align: 'r' })}
+      ${sortHeader('Créée le', 'created_at', SORT, { align: 'r' })}
     </div>
     ${body}
     <div class="panel-foot">
@@ -76,6 +86,7 @@ export async function render(el) {
     </div>
   </div>`;
 
+  bindSort(el, SORT, () => render(el));
   el.querySelector('[data-q]').addEventListener('input', (e) => {
     F.query = e.target.value;
     render(el);
