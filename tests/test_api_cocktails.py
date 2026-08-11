@@ -137,3 +137,36 @@ def test_cocktail_cost_respects_the_reference_cascade(client):
 def test_cocktail_rows_carry_created_at(client):
     client.post("/api/cocktails", json={})
     assert client.get("/api/cocktails").json()["cocktails"][0]["created_at"]
+
+
+def test_cocktail_uses_its_own_target_margin(client):
+    """Une fiche avec sa marge propre reçoit un autre prix conseillé."""
+    cid = client.post("/api/cocktails", json={}).json()["id"]
+    ref = client.post(
+        "/api/refs",
+        json={"nom": "Base", "categorie_id": 1, "vol_cl": 70, "abv": 40, "achat_ht": 21.0},
+    ).json()["id"]
+    client.patch(f"/api/cocktails/{cid}", json={"ings": [{"ref_id": ref, "qty": 5}]})
+
+    def fiche():
+        return next(c for c in client.get("/api/cocktails").json()["cocktails"] if c["id"] == cid)
+
+    maison = fiche()
+    assert maison["marge_custom"] is False
+    assert maison["marge_cible"] == client.get("/api/state").json()["pricing"]["cible"]
+
+    client.patch(f"/api/cocktails/{cid}", json={"marge_pct": 60})
+    propre = fiche()
+    assert propre["marge_custom"] is True
+    assert propre["marge_cible"] == 60
+    assert propre["suggested"] < maison["suggested"]  # viser moins de marge = prix plus bas
+
+    client.patch(f"/api/cocktails/{cid}", json={"marge_pct": None})
+    assert fiche()["marge_custom"] is False
+
+
+def test_cocktail_price_can_be_pinned(client):
+    cid = client.post("/api/cocktails", json={}).json()["id"]
+    assert client.get("/api/cocktails").json()["cocktails"][0]["prix_fixe"] is False
+    client.patch(f"/api/cocktails/{cid}", json={"prix_fixe": True})
+    assert client.get("/api/cocktails").json()["cocktails"][0]["prix_fixe"] is True

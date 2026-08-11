@@ -177,9 +177,20 @@ export async function render(el) {
     </div>
     <div class="panel" style="padding:20px; display:flex; flex-direction:column; gap:11px;">
       <div class="mono-label" style="color:var(--mut2);">Prix conseillé</div>
-      <div style="font-size:13px; color:var(--mut);" class="pretty">Pour tenir la marge cible de
-        ${pc(pr.cible)}, cette fiche se vend <span class="accent">${eur(c.suggested)}</span>.</div>
-      <button class="btn" data-apply style="margin-top:4px;">Appliquer ce prix</button>
+      <div style="font-size:13px; color:var(--mut);" class="pretty">Pour tenir la marge
+        ${c.marge_custom ? 'propre à cette fiche' : 'cible de la maison'} de
+        ${pc(c.marge_cible)}, elle se vend <span class="accent">${eur(c.suggested)}</span>.</div>
+      <div class="row" style="gap:10px; align-items:flex-end;">
+        <div class="field grow"><div class="mono-label">Marge visée par cette fiche</div>
+          <input class="input num" data-marge value="${c.marge_custom ? num(c.marge_cible, 0) : ''}"
+            placeholder="${num(pr.cible, 0)} · cible maison" aria-label="Marge visée"></div>
+        <button class="btn" data-apply>Appliquer ce prix</button>
+      </div>
+      <label class="row" style="gap:9px; cursor:pointer; padding-top:4px;">
+        <input type="checkbox" data-fixe ${c.prix_fixe ? 'checked' : ''} style="accent-color:var(--ac);">
+        <span style="font-size:12.5px; color:var(--mut);">Prix figé : ne pas le déplacer,
+          même lors d’un réglage d’ensemble de la carte</span>
+      </label>
     </div>
     <div class="panel" style="padding:20px; display:flex; flex-direction:column; gap:10px;">
       <div class="mono-label" style="color:var(--mut2);">Faisabilité au stock</div>
@@ -314,6 +325,20 @@ export async function render(el) {
   );
   el.querySelector('[data-new-untracked]').addEventListener('click', () =>
     openRefModal({ suivi: false, onSaved: (id) => patchIngs([...c.ings, { ref_id: id, qty: 1 }]) })
+  );
+
+  const margeInput = el.querySelector('[data-marge]');
+  margeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') margeInput.blur(); });
+  margeInput.addEventListener('blur', () => {
+    const v = margeInput.value.trim();
+    // vide = revenir à la cible de la maison
+    const marge = v === '' ? null : Number(v.replace(',', '.'));
+    if (marge !== null && Number.isNaN(marge)) { margeInput.value = ''; return; }
+    if (marge === (c.marge_custom ? c.marge_cible : null)) return;
+    patch({ marge_pct: marge });
+  });
+  el.querySelector('[data-fixe]').addEventListener('change', (e) =>
+    patch({ prix_fixe: e.target.checked })
   );
 
   const priceSlider = el.querySelector('[data-price]');
