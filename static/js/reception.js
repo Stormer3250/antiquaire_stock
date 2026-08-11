@@ -1,7 +1,7 @@
 // Réception de marchandise : lieu + lignes (référence, quantité) → mouvements 'reception'.
 
 import { apiGet, apiSend } from './api.js';
-import { esc, num, openModal, closeModal } from './ui.js';
+import { esc, num, openModal, closeModal, alertModal } from './ui.js';
 import { S, refresh } from './app.js';
 
 export async function openReception() {
@@ -136,7 +136,7 @@ export async function openReception() {
       closeModal();
       await refresh();
     } catch (e) {
-      alert(`Réception impossible : ${e.message}`);
+      await alertModal({ title: 'Réception impossible', body: e.message });
     }
   }
 

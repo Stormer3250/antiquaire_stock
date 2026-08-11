@@ -116,6 +116,10 @@ async function boot() {
   document.getElementById('btn-new-ref').addEventListener('click', () => openRefModal());
   window.addEventListener('hashchange', route);
   await route();
+  // Quelle version tourne ici : le Mac et la démo ne mentent plus.
+  apiGet('/api/health').then((h) => {
+    document.getElementById('build-stamp').textContent = `v${h.version} · ${h.build}`;
+  }).catch(() => {});
 }
 
 boot();

@@ -36,9 +36,7 @@ def test_migration_002_adds_dose_and_fiscal_columns(conn):
 
 
 def test_migration_002_adds_dom_rate(conn):
-    rates = json.loads(
-        conn.execute("SELECT value FROM settings WHERE key = 'rates'").fetchone()[0]
-    )
+    rates = json.loads(conn.execute("SELECT value FROM settings WHERE key = 'rates'").fetchone()[0])
     assert rates["accise_dom"] == 903.51
 
 
@@ -65,6 +63,6 @@ def test_migration_002_backfills_alcoolise(tmp_path):
 
     rows = {r["nom"]: r["alcoolise"] for r in c.execute("SELECT nom, alcoolise FROM refs")}
     assert rows["Rhum"] == 1
-    assert rows["Sirop"] == 0       # catégorie sans régime fiscal
-    assert rows["Eau plate"] == 0   # degré nul
+    assert rows["Sirop"] == 0  # catégorie sans régime fiscal
+    assert rows["Eau plate"] == 0  # degré nul
     c.close()

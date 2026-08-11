@@ -1,7 +1,7 @@
 // Configuration : politique de prix, catégories, référentiels, lieux, sauvegardes.
 
 import { apiGet, apiSend } from '../api.js';
-import { esc, eur, num, parseNum, confirmModal } from '../ui.js';
+import { esc, eur, num, parseNum, confirmModal, alertModal } from '../ui.js';
 import { S, reloadMeta, refresh } from '../app.js';
 
 const REGIMES = [
@@ -192,7 +192,7 @@ export async function render(el) {
       if (!ok) return;
       try {
         await apiSend('DELETE', `/api/categories/${c.id}`);
-      } catch (e) { alert(e.message); }
+      } catch (e) { await alertModal({ title: 'Modification refusée', body: e.message }); }
       await reloadMeta();
       await render(el);
     })
@@ -219,7 +219,7 @@ export async function render(el) {
     while (S.meta.locations.some((l) => l.nom === nom)) nom = `Nouveau lieu ${n++}`;
     try {
       await apiSend('POST', '/api/locations', { nom });
-    } catch (e) { alert(e.message); }
+    } catch (e) { await alertModal({ title: 'Modification refusée', body: e.message }); }
     await reloadMeta();
     await refresh();
   });
@@ -234,7 +234,7 @@ export async function render(el) {
       try {
         await apiSend('DELETE', `/api/locations/${l.id}`);
         if (S.lieu === l.id) S.lieu = 'tous';
-      } catch (e) { alert(e.message); }
+      } catch (e) { await alertModal({ title: 'Modification refusée', body: e.message }); }
       await reloadMeta();
       await refresh();
     })

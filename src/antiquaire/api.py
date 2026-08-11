@@ -317,6 +317,25 @@ def movements_list(conn: Conn, ref: int | None = None, lieu: str | None = None, 
 # ---------- health ----------
 
 
+def build_stamp() -> tuple[str, str]:
+    """Version du paquet + date du fichier le plus récent de l'application.
+
+    Pas de git à l'exécution : l'appliance tourne depuis un dossier déployé,
+    la date de modification du code est l'information honnête et disponible.
+    """
+    import datetime
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as pkg_version
+    from pathlib import Path
+
+    try:
+        v = pkg_version("antiquaire")
+    except PackageNotFoundError:
+        v = "dev"
+    newest = max(p.stat().st_mtime for p in Path(__file__).parent.rglob("*.py"))
+    return v, datetime.date.fromtimestamp(newest).isoformat()
+
+
 @router.get("/health")
 def health(conn: Conn):
     db_ok = conn.execute("SELECT count(*) FROM settings").fetchone()[0] >= 3
@@ -328,4 +347,5 @@ def health(conn: Conn):
         last = datetime.datetime.fromtimestamp(snaps[-1].stat().st_mtime).isoformat(
             timespec="seconds"
         )
-    return {"ok": True, "db_ok": db_ok, "last_backup_at": last}
+    v, build = build_stamp()
+    return {"ok": True, "db_ok": db_ok, "last_backup_at": last, "version": v, "build": build}

@@ -127,8 +127,8 @@ def test_cocktail_cost_respects_the_reference_cascade(client):
     def cost_of(ref_id):
         cid = client.post("/api/cocktails", json={}).json()["id"]
         client.patch(f"/api/cocktails/{cid}", json={"ings": [{"ref_id": ref_id, "qty": 5}]})
-        return next(
-            c for c in client.get("/api/cocktails").json()["cocktails"] if c["id"] == cid
-        )["cost"]
+        return next(c for c in client.get("/api/cocktails").json()["cocktails"] if c["id"] == cid)[
+            "cost"
+        ]
 
     assert cost_of(dom) < cost_of(plain)
