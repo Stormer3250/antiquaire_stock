@@ -46,6 +46,16 @@ const STEPS = {
     ['[data-apply]', 'Le prix conseillé',
       'Le prix qui tient la marge cible de la maison compte tenu du coût matière. Le curseur au-dessus permet de s’en écarter, la carte passe en rouge sous le plancher de marge.'],
   ],
+  menus: [
+    ['[data-menu-nom]', 'Un menu, des fiches',
+      'Un menu regroupe des fiches. Une fiche n’appartient qu’à un seul menu : c’est ce qui permet de dire sans ambiguïté quel prix s’applique à elle.'],
+    ['[data-fiches] .thead', 'Les prix affichés',
+      'Ce sont ceux de la tarification consultée à droite, même si elle n’est pas encore appliquée. La marge suit, ce qui permet d’essayer une grille avant de s’y engager.'],
+    ['[data-new-tarif]', 'Tarifications',
+      'Mêmes recettes, prix différents : une pour l’été, une pour l’happy hour, une en brouillon. « APPL » désigne celle qu’on pratique vraiment, et c’est elle que reprennent le comptoir et les marges.'],
+    ['[data-comparer]', 'Comparer',
+      'Deux tarifications côte à côte, prix et marge par fiche, écart mis en évidence, plus la moyenne de chacune.'],
+  ],
   cave: [
     ['.thead', 'Seuil et cible',
       'Le seuil déclenche l’alerte, la cible est le stock à reconstituer : la commande suggérée vaut cible moins stock.'],

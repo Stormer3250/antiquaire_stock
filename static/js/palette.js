@@ -14,6 +14,7 @@ const ECRANS = [
   ['refs', 'Références'],
   ['inv', 'Inventaire'],
   ['cocktails', 'Cartes & recettes'],
+  ['menus', 'Menus & tarifications'],
   ['cave', 'Cave & seuils'],
   ['bareme', 'Barème fiscal'],
   ['config', 'Configuration'],
@@ -48,10 +49,27 @@ async function collect() {
     }
   );
 
-  const [stock, cocktails] = await Promise.all([
+  const [stock, cocktails, menus] = await Promise.all([
     apiGet('/api/stock').catch(() => ({ refs: [] })),
     apiGet('/api/cocktails').catch(() => ({ cocktails: [] })),
+    apiGet('/api/menus').catch(() => ({ menus: [] })),
   ]);
+  menus.menus.forEach((m) => {
+    items.push({
+      kind: 'Menu',
+      label: m.nom,
+      hint: `${m.kpis.n || 0} fiches`,
+      run: () => go('#/menus'),
+    });
+    m.tarifs.forEach((t) =>
+      items.push({
+        kind: 'Tarification',
+        label: t.nom,
+        hint: `${m.nom}${t.actif ? ' · appliquée' : ''}`,
+        run: () => go('#/menus'),
+      })
+    );
+  });
   stock.refs.forEach((r) =>
     items.push({
       kind: 'Référence',

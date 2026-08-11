@@ -452,3 +452,32 @@ select.input option { background: var(--input); color: var(--ink); }
   color: var(--ac);
 }
 .sum-hidden { color: var(--mut3); font-size: 11.5px; }
+
+/* ---------- menus & tarifications ---------- */
+.menu-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.menu-alert {
+  padding: 9px 12px; border: 1px solid var(--warn-line, #402825);
+  color: var(--warn-mut); font-size: 12.5px;
+}
+.tarif-row { display: flex; align-items: center; border-bottom: 1px solid var(--line2); }
+.tarif-row.on { background: var(--panel2); box-shadow: inset 2px 0 0 var(--ac); }
+.tarif-pick {
+  flex: 1; min-width: 0; text-align: left; padding: 12px 8px 12px 16px;
+  background: transparent; border: none; color: var(--mut); font-family: var(--sans); cursor: pointer;
+}
+.tarif-row.on .tarif-pick { color: var(--ink); }
+.tarif-actions { display: flex; gap: 4px; padding-right: 10px; opacity: 0; transition: opacity .12s; }
+.tarif-row:hover .tarif-actions, .tarif-row.on .tarif-actions { opacity: 1; }
+.chip-actif {
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; padding: 2px 5px;
+  border: 1px solid var(--ac); color: var(--ac);
+}
+.cmp-row {
+  display: grid; grid-template-columns: 2fr 1fr 1fr .8fr; gap: 12px; align-items: center;
+  padding: 9px 0; border-bottom: 1px solid var(--line2);
+}
+.cmp-head, .cmp-foot { border-bottom: none; border-top: 1px solid var(--line); padding-top: 12px; }
+.cmp-head { border-top: none; padding-top: 0; }
+.cmp-marge { display: block; font-size: 10.5px; color: var(--mut3); }
+/* [hidden] perd contre display:flex : il faut le dire explicitement */
+.table-summary[hidden] { display: none; }

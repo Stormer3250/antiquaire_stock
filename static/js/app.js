@@ -7,6 +7,7 @@ import * as refs from './screens/refs.js';
 import * as product from './screens/product.js';
 import * as inv from './screens/inventory.js';
 import * as cocktails from './screens/cocktails.js';
+import * as menus from './screens/menus.js';
 import * as cave from './screens/cave.js';
 import * as bareme from './screens/bareme.js';
 import * as config from './screens/config.js';
@@ -29,12 +30,13 @@ const NAV = [
   { key: 'refs', label: 'Références', num: '02' },
   { key: 'inv', label: 'Inventaire', num: '03' },
   { key: 'cocktails', label: 'Cartes & recettes', num: '04' },
-  { key: 'cave', label: 'Cave & seuils', num: '05' },
-  { key: 'bareme', label: 'Barème fiscal', num: '06' },
-  { key: 'config', label: 'Configuration', num: '07' },
+  { key: 'menus', label: 'Menus & tarifications', num: '05' },
+  { key: 'cave', label: 'Cave & seuils', num: '06' },
+  { key: 'bareme', label: 'Barème fiscal', num: '07' },
+  { key: 'config', label: 'Configuration', num: '08' },
 ];
 
-const SCREENS = { dash, refs, product, inv, cocktails, cave, bareme, config };
+const SCREENS = { dash, refs, product, inv, cocktails, menus, cave, bareme, config };
 
 const TITLES = {
   dash: ['Bonsoir, le comptoir est ouvert', 'Valeur de la cave, commandes et marges de la carte'],
@@ -42,6 +44,7 @@ const TITLES = {
   product: ['Fiche bouteille', 'Coût de revient, part fiscale et prix conseillé'],
   inv: ['Inventaire', 'Comptage à la bouteille · vide, ¼, ½, ¾, pleine'],
   cocktails: ['Cartes & recettes', 'Saisie des fiches, coût matière et marge'],
+  menus: ['Menus & tarifications', 'Regrouper les fiches, tenir plusieurs grilles de prix'],
   cave: ['Cave & seuils', 'Maintien du stock, garnitures et import de fichier'],
   bareme: ['Barème fiscal', 'Droits d’accise et cotisation sécurité sociale'],
   config: ['Configuration', 'Politique de prix, catégories et référentiels'],
