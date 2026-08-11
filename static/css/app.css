@@ -411,3 +411,21 @@ select.input option { background: var(--input); color: var(--ink); }
   border-top: 1px solid var(--line); font-family: var(--mono); font-size: 9.5px;
   letter-spacing: .06em; color: var(--mut3);
 }
+
+/* ---------- visite guidée ---------- */
+.tour-overlay {
+  position: fixed; z-index: 200; pointer-events: auto; border: 1px solid var(--ac);
+  box-shadow: 0 0 0 9999px rgba(8, 6, 5, .74); transition: all .18s ease;
+}
+.tour-bubble {
+  position: fixed; z-index: 201; width: min(380px, 90vw); background: var(--panel);
+  border: 1px solid var(--ac); box-shadow: 0 20px 50px rgba(0, 0, 0, .6);
+  padding: 18px 20px; display: flex; flex-direction: column; gap: 9px;
+}
+.tour-step {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ac);
+}
+.tour-title { font-size: 19px; }
+.tour-text { font-size: 13px; color: var(--mut); line-height: 1.55; }
+.tour-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }

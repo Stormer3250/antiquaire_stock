@@ -14,6 +14,7 @@ import { openReception } from './reception.js';
 import { openRefModal } from './refmodal.js';
 import { installSelectUpgrader } from './select.js';
 import { installPalette } from './palette.js';
+import { installTour, autoTour } from './tour.js';
 
 export const S = {
   meta: null,          // /api/state : pricing, rates, lists, categories, locations
@@ -110,12 +111,14 @@ async function route() {
   const el = document.getElementById('screen');
   el.innerHTML = '';
   await SCREENS[S.screen].render(el, S);
+  autoTour(S.screen);
 }
 
 async function boot() {
   await reloadMeta();
   installSelectUpgrader();
   installPalette();
+  installTour(() => S.screen);
   document.getElementById('btn-reception').addEventListener('click', () => openReception());
   document.getElementById('btn-new-ref').addEventListener('click', () => openRefModal());
   window.addEventListener('hashchange', route);
