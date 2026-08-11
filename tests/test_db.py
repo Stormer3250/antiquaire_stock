@@ -66,3 +66,32 @@ def test_migration_002_backfills_alcoolise(tmp_path):
     assert rows["Sirop"] == 0  # catégorie sans régime fiscal
     assert rows["Eau plate"] == 1  # degré vide = donnée manquante, pas un soft
     c.close()
+
+
+def test_migration_005_menus(conn):
+    tables = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"menus", "menu_items", "tarifs", "tarif_prix"} <= tables
+
+
+def test_a_cocktail_belongs_to_at_most_one_menu(conn):
+    conn.execute("INSERT INTO menus (nom, created_at) VALUES ('Carte', '2026-01-01')")
+    conn.execute("INSERT INTO menus (nom, created_at) VALUES ('Été', '2026-01-01')")
+    conn.execute("INSERT INTO cocktails (nom, created_at) VALUES ('Negroni', '2026-01-01')")
+    conn.execute("INSERT INTO menu_items (menu_id, cocktail_id) VALUES (1, 1)")
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute("INSERT INTO menu_items (menu_id, cocktail_id) VALUES (2, 1)")
+
+
+def test_deleting_a_menu_keeps_its_cocktails(conn):
+    conn.execute("INSERT INTO menus (nom, created_at) VALUES ('Carte', '2026-01-01')")
+    conn.execute("INSERT INTO cocktails (nom, created_at) VALUES ('Negroni', '2026-01-01')")
+    conn.execute("INSERT INTO menu_items (menu_id, cocktail_id) VALUES (1, 1)")
+    conn.execute("INSERT INTO tarifs (menu_id, nom, created_at) VALUES (1, 'Été', '2026-01-01')")
+    conn.execute("INSERT INTO tarif_prix (tarif_id, cocktail_id, prix_ttc) VALUES (1, 1, 14)")
+    conn.commit()
+    conn.execute("DELETE FROM menus WHERE id = 1")
+    conn.commit()
+    assert conn.execute("SELECT count(*) FROM cocktails").fetchone()[0] == 1
+    assert conn.execute("SELECT count(*) FROM menu_items").fetchone()[0] == 0
+    assert conn.execute("SELECT count(*) FROM tarifs").fetchone()[0] == 0
+    assert conn.execute("SELECT count(*) FROM tarif_prix").fetchone()[0] == 0
