@@ -73,9 +73,7 @@ def menus_list(conn: Conn, lieu: str | None = None):
         return serialize_cocktail(conn, dict(row), settings, levels, prix_actifs, menus)
 
     out = []
-    for m in conn.execute(
-        "SELECT * FROM menus WHERE active = 1 ORDER BY position, id"
-    ).fetchall():
+    for m in conn.execute("SELECT * FROM menus WHERE active = 1 ORDER BY position, id").fetchall():
         rows = conn.execute(
             """SELECT c.* FROM menu_items mi JOIN cocktails c ON c.id = mi.cocktail_id
                WHERE mi.menu_id = ? AND c.active = 1 ORDER BY mi.position, mi.id""",
