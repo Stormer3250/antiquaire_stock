@@ -170,3 +170,61 @@ def test_cocktail_price_can_be_pinned(client):
     assert client.get("/api/cocktails").json()["cocktails"][0]["prix_fixe"] is False
     client.patch(f"/api/cocktails/{cid}", json={"prix_fixe": True})
     assert client.get("/api/cocktails").json()["cocktails"][0]["prix_fixe"] is True
+
+
+# ---------- prix effectif : fiche ou tarification active ----------
+
+
+def make_menu_with(client, cocktail_id, nom="Carte principale"):
+    mid = client.post("/api/menus", json={"nom": nom}).json()["id"]
+    client.patch(f"/api/menus/{mid}", json={"cocktail_ids": [cocktail_id]})
+    return mid
+
+
+def test_price_comes_from_the_fiche_without_a_menu(client):
+    cid = client.post("/api/cocktails", json={}).json()["id"]
+    client.patch(f"/api/cocktails/{cid}", json={"prix_ttc": 13.5})
+    c = client.get("/api/cocktails").json()["cocktails"][0]
+    assert c["prix_ttc"] == 13.5
+    assert c["prix_source"] == "fiche"
+
+
+def test_price_comes_from_the_active_tarification(client):
+    cid = client.post("/api/cocktails", json={}).json()["id"]
+    client.patch(f"/api/cocktails/{cid}", json={"prix_ttc": 13.5})
+    mid = make_menu_with(client, cid)
+    tid = client.post(f"/api/menus/{mid}/tarifs", json={"nom": "Été"}).json()["id"]
+    client.patch(f"/api/tarifs/{tid}", json={"prix": {str(cid): 16.0}, "actif": True})
+    c = client.get("/api/cocktails").json()["cocktails"][0]
+    assert c["prix_ttc"] == 16.0
+    assert c["prix_source"] == "tarif"
+    assert c["menu_nom"] == "Carte principale"
+
+
+def test_menu_without_an_active_tarification_falls_back_to_the_fiche(client):
+    cid = client.post("/api/cocktails", json={}).json()["id"]
+    client.patch(f"/api/cocktails/{cid}", json={"prix_ttc": 13.5})
+    mid = make_menu_with(client, cid)
+    tid = client.post(f"/api/menus/{mid}/tarifs", json={"nom": "Brouillon"}).json()["id"]
+    client.patch(f"/api/tarifs/{tid}", json={"prix": {str(cid): 16.0}})  # jamais activée
+    c = client.get("/api/cocktails").json()["cocktails"][0]
+    assert c["prix_ttc"] == 13.5
+    assert c["prix_source"] == "fiche"
+
+
+def test_editing_the_price_of_a_menu_cocktail_writes_into_the_tarification(client):
+    """Le curseur de la fiche continue de marcher, mais il écrit au bon endroit."""
+    cid = client.post("/api/cocktails", json={}).json()["id"]
+    client.patch(f"/api/cocktails/{cid}", json={"prix_ttc": 13.5})
+    mid = make_menu_with(client, cid)
+    tid = client.post(f"/api/menus/{mid}/tarifs", json={"nom": "Été"}).json()["id"]
+    client.patch(f"/api/tarifs/{tid}", json={"actif": True})
+
+    client.patch(f"/api/cocktails/{cid}", json={"prix_ttc": 17.5})
+    assert client.get("/api/cocktails").json()["cocktails"][0]["prix_ttc"] == 17.5
+    # la tarification a bougé, le prix de repli de la fiche n'a pas été touché
+    menu = client.get("/api/menus").json()["menus"][0]
+    tarif = next(t for t in menu["tarifs"] if t["id"] == tid)
+    assert tarif["prix"][str(cid)] == 17.5
+    client.patch(f"/api/tarifs/{tid}", json={"actif": False})
+    assert client.get("/api/cocktails").json()["cocktails"][0]["prix_ttc"] == 13.5

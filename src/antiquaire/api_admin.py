@@ -14,6 +14,28 @@ router = APIRouter()
 # ---------- cocktails ----------
 
 
+def active_prices(conn: sqlite3.Connection) -> dict[int, float]:
+    """Prix issus de la tarification active du menu de chaque fiche.
+
+    Seul endroit où la question « quel prix s'applique » est tranchée : tout le reste
+    (registre, comptoir, marges) lit à travers, sans savoir que les menus existent.
+    """
+    rows = conn.execute(
+        """SELECT tp.cocktail_id, tp.prix_ttc
+           FROM tarif_prix tp JOIN tarifs t ON t.id = tp.tarif_id
+           WHERE t.actif = 1"""
+    )
+    return {r["cocktail_id"]: r["prix_ttc"] for r in rows}
+
+
+def menu_of(conn: sqlite3.Connection) -> dict[int, tuple[int, str]]:
+    rows = conn.execute(
+        """SELECT mi.cocktail_id, m.id, m.nom FROM menu_items mi
+           JOIN menus m ON m.id = mi.menu_id WHERE m.active = 1"""
+    )
+    return {r["cocktail_id"]: (r[1], r[2]) for r in rows}
+
+
 def cost_per_cl(ref: dict, cat: dict, rates: dict) -> float:
     """€ pour 1 cl d'une référence suivie, droits compris si nécessaire."""
     return pricing.cost_per_dose(
@@ -29,7 +51,12 @@ def cost_per_cl(ref: dict, cat: dict, rates: dict) -> float:
 
 
 def serialize_cocktail(
-    conn: sqlite3.Connection, cocktail: dict, settings: dict, levels: dict[int, float]
+    conn: sqlite3.Connection,
+    cocktail: dict,
+    settings: dict,
+    levels: dict[int, float],
+    prix_actifs: dict[int, float] | None = None,
+    menus: dict[int, tuple[int, str]] | None = None,
 ) -> dict:
     rates, pr = settings["rates"], settings["pricing"]
     ing_rows = conn.execute(
@@ -72,7 +99,11 @@ def serialize_cocktail(
             }
         )
     cost = pricing.cocktail_cost(cost_lines)
-    prix = cocktail["prix_ttc"]
+    prix_actifs = prix_actifs if prix_actifs is not None else {}
+    menus = menus if menus is not None else {}
+    depuis_tarif = cocktail["id"] in prix_actifs
+    prix = prix_actifs.get(cocktail["id"], cocktail["prix_ttc"])
+    menu = menus.get(cocktail["id"])
     ht = prix / 1.2
     marge = (ht - cost) / ht * 100 if ht > 0 else 0.0
     feas = pricing.feasibility(feas_lines)
@@ -86,6 +117,10 @@ def serialize_cocktail(
         "description": cocktail["description"],
         "created_at": cocktail["created_at"],
         "prix_ttc": prix,
+        "prix_source": "tarif" if depuis_tarif else "fiche",
+        "prix_fiche": cocktail["prix_ttc"],
+        "menu_id": menu[0] if menu else None,
+        "menu_nom": menu[1] if menu else None,
         "ings": ings,
         "cost": cost,
         "prix_ht": ht,
@@ -104,8 +139,13 @@ def serialize_cocktail(
 def cocktails_list(conn: Conn, lieu: str | None = None):
     settings = load_settings(conn)
     levels = stock.stock_levels(conn, parse_lieu(lieu))
+    prix_actifs, menus = active_prices(conn), menu_of(conn)
     rows = conn.execute("SELECT * FROM cocktails WHERE active = 1 ORDER BY position, id").fetchall()
-    return {"cocktails": [serialize_cocktail(conn, dict(r), settings, levels) for r in rows]}
+    return {
+        "cocktails": [
+            serialize_cocktail(conn, dict(r), settings, levels, prix_actifs, menus) for r in rows
+        ]
+    }
 
 
 @router.post("/cocktails")
@@ -154,6 +194,20 @@ def cocktail_patch(cid: int, conn: Conn, body: dict = Body(...)):
     }
     if "prix_fixe" in fields:
         fields["prix_fixe"] = bool(fields["prix_fixe"])
+    # Une fiche au menu voit son prix vivre dans la tarification active : on écrit là,
+    # sinon le curseur de la fiche modifierait un prix que plus personne ne lit.
+    if "prix_ttc" in fields:
+        actif = conn.execute(
+            """SELECT t.id FROM tarifs t JOIN menu_items mi ON mi.menu_id = t.menu_id
+               WHERE mi.cocktail_id = ? AND t.actif = 1""",
+            (cid,),
+        ).fetchone()
+        if actif:
+            conn.execute(
+                """INSERT INTO tarif_prix (tarif_id, cocktail_id, prix_ttc) VALUES (?, ?, ?)
+                   ON CONFLICT(tarif_id, cocktail_id) DO UPDATE SET prix_ttc = excluded.prix_ttc""",
+                (actif["id"], cid, float(fields.pop("prix_ttc"))),
+            )
     try:
         if fields:
             sets = ", ".join(f"{k} = ?" for k in fields)
