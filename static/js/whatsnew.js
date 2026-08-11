@@ -3,8 +3,10 @@
 
 import { apiGet } from './api.js';
 import { esc, openModal } from './ui.js';
+import { auto } from './overlay.js';
 
-const KEY = 'antiquaire.vuVersion';
+const KEY = 'antiquaire.vuBuild';       // date de build déjà vue
+const ANCIEN = 'antiquaire.vuVersion';  // clé de la toute première livraison
 
 // La plus récente en premier. Une entrée par livraison, en français courant.
 const NOTES = [
@@ -32,14 +34,14 @@ const NOTES = [
   },
 ];
 
-export function openWhatsNew() {
+export function openWhatsNew(notes = NOTES) {
   openModal(`
     <div class="modal-head">
       <div class="serif-title">Quoi de neuf</div>
       <button class="modal-x" aria-label="Fermer">×</button>
     </div>
     <div class="modal-body" style="display:flex; flex-direction:column; gap:20px;">
-      ${NOTES.map((n) => `
+      ${notes.map((n) => `
       <div style="display:flex; flex-direction:column; gap:8px;">
         <div class="mono-label">${esc(n.date)}</div>
         <div class="serif-title" style="font-size:17px;">${esc(n.titre)}</div>
@@ -52,14 +54,30 @@ export function openWhatsNew() {
 
 export async function installWhatsNew() {
   const stamp = document.getElementById('build-stamp');
-  stamp?.addEventListener('click', openWhatsNew);
+  stamp?.addEventListener('click', () => openWhatsNew());
+  let build;
   try {
-    const { version, build } = await apiGet('/api/health');
-    const tag = `${version}·${build}`;
-    if (localStorage.getItem(KEY) === tag) return;
-    localStorage.setItem(KEY, tag);
-    openWhatsNew();
+    ({ build } = await apiGet('/api/health'));
   } catch {
-    /* hors ligne : rien à annoncer */
+    return;   // hors ligne : rien à annoncer
   }
+
+  const vu = localStorage.getItem(KEY);
+  // Première ouverture de l'application, ou reprise après l'ancienne clé : on note la
+  // version en silence. Annoncer des nouveautés à quelqu'un qui découvre l'outil n'a
+  // aucun sens, il n'a rien connu d'autre.
+  if (!vu) {
+    localStorage.setItem(KEY, build);
+    if (!localStorage.getItem(ANCIEN)) return;
+    localStorage.removeItem(ANCIEN);
+    return;
+  }
+  if (vu === build) return;
+
+  localStorage.setItem(KEY, build);
+  // Seulement ce qui est arrivé depuis la version qu'il avait. Rien de neuf à ses
+  // yeux ⇒ aucune fenêtre : une mise à jour technique ne mérite pas une interruption.
+  const nouveautes = NOTES.filter((n) => n.date > vu);
+  if (!nouveautes.length) return;
+  auto('whatsnew', () => openWhatsNew(nouveautes));
 }
