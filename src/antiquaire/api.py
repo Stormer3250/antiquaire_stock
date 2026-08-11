@@ -43,13 +43,11 @@ def parse_lieu(lieu: str | None) -> int | None:
     return int(lieu)
 
 
-def effective_marge(ref: dict, cat: dict) -> float:
-    return ref["marge_pct"] if ref["marge_pct"] is not None else cat["marge_pct"]
-
-
 def serialize_ref(ref: dict, cat: dict, settings: dict, niveau: float) -> dict:
     """Une ligne du grand registre, avec tout le calcul prix/marge fait côté serveur."""
     suivi = bool(ref["suivi"])
+    dose = pricing.effective_dose(ref, cat)
+    regime = pricing.effective_regime(ref, cat)
     out = {
         "id": ref["id"],
         "nom": ref["nom"],
@@ -65,9 +63,14 @@ def serialize_ref(ref: dict, cat: dict, settings: dict, niveau: float) -> dict:
         "droits_inclus": bool(ref["droits_inclus"]),
         "suivi": suivi,
         "unite": ref["unite"],
-        "marge": effective_marge(ref, cat),
+        "marge": pricing.effective_marge(ref, cat),
         "marge_custom": ref["marge_pct"] is not None,
-        "dose_cl": cat["dose_cl"],
+        "dose_cl": dose,
+        "dose_custom": ref["dose_cl"] is not None,
+        "alcoolise": bool(ref["alcoolise"]),
+        "regime": regime,
+        "regime_custom": ref["regime"] is not None,
+        "dom": bool(ref["dom"]),
     }
     if not suivi:
         out.update(
@@ -86,11 +89,12 @@ def serialize_ref(ref: dict, cat: dict, settings: dict, niveau: float) -> dict:
     cost = pricing.cost_per_dose(
         ref["achat_ht"],
         ref["vol_cl"],
-        cat["dose_cl"],
+        dose,
         droits_inclus=bool(ref["droits_inclus"]),
-        regime=cat["regime"],
+        regime=regime,
         abv=ref["abv"],
         rates=rates,
+        dom=bool(ref["dom"]),
     )
     override = ref["prix_ttc"] is not None
     prix = (
@@ -184,6 +188,10 @@ REF_FIELDS = {
     "droits_inclus",
     "suivi",
     "unite",
+    "dose_cl",
+    "alcoolise",
+    "regime",
+    "dom",
 }
 
 
@@ -198,6 +206,8 @@ def create_ref(conn: Conn, body: dict = Body(...)):
     fields = {k: v for k, v in body.items() if k in REF_FIELDS}
     fields.setdefault("suivi", True)
     fields["droits_inclus"] = bool(fields.get("droits_inclus", False))
+    fields["alcoolise"] = bool(fields.get("alcoolise", True))
+    fields["dom"] = bool(fields.get("dom", False))
     cols = ", ".join(fields)
     marks = ", ".join("?" for _ in fields)
     cur = conn.execute(
@@ -214,6 +224,9 @@ def patch_ref(ref_id: int, conn: Conn, body: dict = Body(...)):
     fields = {k: v for k, v in body.items() if k in REF_FIELDS}
     if not fields:
         raise HTTPException(422, "aucun champ modifiable")
+    for key in ("droits_inclus", "alcoolise", "dom"):
+        if key in fields:
+            fields[key] = bool(fields[key])
     sets = ", ".join(f"{k} = ?" for k in fields)
     conn.execute(f"UPDATE refs SET {sets} WHERE id = ?", [*fields.values(), ref_id])
     conn.commit()
@@ -238,8 +251,10 @@ def fiche(ref_id: int, conn: Conn, lieu: str | None = None):
     lieu_id = parse_lieu(lieu)
     niveau = stock.stock_levels(conn, lieu_id).get(ref_id, 0.0)
     base = serialize_ref(ref, cat, settings, niveau)
-    f = pricing.fiscal_per_dose(cat["regime"], ref["abv"], cat["dose_cl"], settings["rates"])
-    doses = pricing.doses_per_bottle(ref["vol_cl"], cat["dose_cl"])
+    f = pricing.fiscal_per_dose(
+        base["regime"], ref["abv"], base["dose_cl"], settings["rates"], dom=bool(ref["dom"])
+    )
+    doses = pricing.doses_per_bottle(ref["vol_cl"], base["dose_cl"])
     base.update(
         {
             "doses_par_bouteille": doses,
@@ -248,7 +263,7 @@ def fiche(ref_id: int, conn: Conn, lieu: str | None = None):
                 "accise": f.accise,
                 "ss": f.ss,
                 "cl_alcool_pur": f.hlap * 100000,
-                "regime": cat["regime"],
+                "regime": base["regime"],
             },
             "prix_ttc_override": ref["prix_ttc"],
             "tva_pct": cat["tva_pct"],
