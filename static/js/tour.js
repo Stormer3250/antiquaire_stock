@@ -144,7 +144,12 @@ export function startTour(ecran) {
 // l'explication une fois, jamais deux.
 export function autoTour(ecran) {
   if (!STEPS[ecran] || localStorage.getItem(SEEN(ecran))) return;
-  setTimeout(() => startTour(ecran), 600);
+  setTimeout(() => {
+    // une modale à l'écran (« Quoi de neuf », une fiche en cours) passe avant :
+    // l'écran n'est pas marqué comme vu, la visite se proposera au prochain passage.
+    if (document.getElementById('modal-root').children.length) return;
+    startTour(ecran);
+  }, 600);
 }
 
 export function installTour(currentScreen) {

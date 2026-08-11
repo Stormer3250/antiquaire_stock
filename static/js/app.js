@@ -15,6 +15,7 @@ import { openRefModal } from './refmodal.js';
 import { installSelectUpgrader } from './select.js';
 import { installPalette } from './palette.js';
 import { installTour, autoTour } from './tour.js';
+import { installWhatsNew } from './whatsnew.js';
 
 export const S = {
   meta: null,          // /api/state : pricing, rates, lists, categories, locations
@@ -125,8 +126,11 @@ async function boot() {
   await route();
   // Quelle version tourne ici : le Mac et la démo ne mentent plus.
   apiGet('/api/health').then((h) => {
-    document.getElementById('build-stamp').textContent = `v${h.version} · ${h.build}`;
+    const stamp = document.getElementById('build-stamp');
+    stamp.textContent = `v${h.version} · ${h.build}`;
+    stamp.title = 'Quoi de neuf';
   }).catch(() => {});
+  await installWhatsNew();
 }
 
 boot();

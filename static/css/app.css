@@ -429,3 +429,9 @@ select.input option { background: var(--input); color: var(--ink); }
 .tour-title { font-size: 19px; }
 .tour-text { font-size: 13px; color: var(--mut); line-height: 1.55; }
 .tour-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }
+
+/* ---------- quoi de neuf ---------- */
+.whatsnew-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; }
+.whatsnew-list li { font-size: 13px; color: var(--mut); line-height: 1.55; }
+.build-stamp { cursor: pointer; }
+.build-stamp:hover { color: var(--ac); }
