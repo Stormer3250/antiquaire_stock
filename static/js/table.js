@@ -61,7 +61,9 @@ export function visibleRows(rows, group, collapsed) {
  * - grid    : la valeur de grid-template-columns SANS la colonne de sélection
  * - select  : true pour la colonne à cocher et la barre de synthèse
  * - summary : (lignesCochees, toutesLignes) => HTML de la barre
- * - group   : { on, label(row) } optionnel — sections repliables, voir `visibleRows`
+ * - group   : { on, label(row), collapsed? } optionnel — sections repliables, voir
+ *             `visibleRows` ; `collapsed` par défaut au Set interne de la table, mais un
+ *             écran peut passer le sien pour le partager avec une autre vue (ex. blocs)
  * Renvoie les lignes effectivement affichées (triées, sélection/résumé), groupe replié ou non.
  */
 export function renderTable(el, spec) {
@@ -87,6 +89,10 @@ export function renderTable(el, spec) {
       ${spec.columns.map((c) => headCell(c, state)).join('')}
     </div>`;
 
+  // `spec.group.collapsed` permet à un écran de partager le même Set de sections
+  // repliées entre sa table et sa vue en blocs ; à défaut, la table garde le sien.
+  const collapsed = spec.group?.collapsed || state.collapsed;
+
   let body;
   if (rows.length === 0) {
     body = spec.empty || '<div class="empty-note">Rien à afficher.</div>';
@@ -102,11 +108,11 @@ export function renderTable(el, spec) {
         current = l;
         parts.push(`
     <div class="tgroup" data-group="${esc(l)}" style="grid-template-columns:1fr;">
-      <span class="tgroup-caret">${state.collapsed.has(l) ? '▸' : '▾'}</span>
+      <span class="tgroup-caret">${collapsed.has(l) ? '▸' : '▾'}</span>
       ${esc(l)} <span class="tgroup-n">· ${counts.get(l)}</span>
     </div>`);
       }
-      if (state.collapsed.has(l)) return;
+      if (collapsed.has(l)) return;
       parts.push(rowHtml(r, spec, grid, state));
     });
     body = parts.join('');
@@ -145,16 +151,17 @@ function paintSummary(el, spec, rows, state) {
 export function bindTable(el, spec, rerender) {
   const state = tableState(spec.id, spec.defaultSort);
   const rows = applySort(spec.rows, state.sort, spec.accessors);
+  const collapsed = spec.group?.collapsed || state.collapsed;
   // Le même ensemble que celui peint par renderTable, pour que les data-row du DOM
   // retrouvent toujours leur ligne (les groupes repliés n'ont pas de nœud).
-  const vis = visibleRows(rows, spec.group, state.collapsed);
+  const vis = visibleRows(rows, spec.group, collapsed);
 
   if (spec.group?.on) {
     el.querySelectorAll('[data-group]').forEach((h) =>
       h.addEventListener('click', () => {
         const label = h.dataset.group;
-        if (state.collapsed.has(label)) state.collapsed.delete(label);
-        else state.collapsed.add(label);
+        if (collapsed.has(label)) collapsed.delete(label);
+        else collapsed.add(label);
         rerender();
       })
     );

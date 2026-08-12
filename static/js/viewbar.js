@@ -25,8 +25,11 @@ export function setView(screen, view) {
 export function renderBar(el, opts) {
   const st = opts.state;
   const enBlocs = opts.views !== false && st.view === 'blocs';
+  // La classe et le contenu vont directement sur `el` : un `<div class="vbar">` imbriqué
+  // dedans casse le `position: sticky` (son parent immédiat n'a alors plus de rapport
+  // direct avec le conteneur défilant `.screen`, et Chrome refuse de le coller).
+  el.className = 'vbar';
   el.innerHTML = `
-  <div class="vbar">
     <input class="input grow" data-vb-q value="${esc(st.search)}" placeholder="${esc(opts.placeholder || 'Chercher…')}">
     ${enBlocs && opts.sortOptions ? `
       <select class="input" data-vb-sort style="width:170px;">
@@ -43,8 +46,7 @@ export function renderBar(el, opts) {
       <div class="vb-views" role="group" aria-label="Vue">
         <button class="${st.view === 'blocs' ? 'active' : ''}" data-vb-view="blocs" title="Blocs">${icone('cartes', 14)}</button>
         <button class="${st.view === 'table' ? 'active' : ''}" data-vb-view="table" title="Table">${icone('inventaire', 14)}</button>
-      </div>` : ''}
-  </div>`;
+      </div>` : ''}`;
 
   const q = el.querySelector('[data-vb-q]');
   q.addEventListener('input', () => { st.search = q.value; opts.onChange(); });

@@ -43,7 +43,7 @@ input[type=range] { accent-color: var(--ac); }
 
 /* ---------- structure ---------- */
 
-.app { display: flex; min-height: 100vh; }
+.app { display: flex; height: 100vh; }
 
 .side {
   width: 64px; flex: 0 0 64px;
@@ -105,7 +105,7 @@ body.nav-epinglee .pin .ic { transform: rotate(180deg); }
 }
 .side-foot-line { font-size: 13px; color: var(--mut); }
 
-.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .topbar {
   display: flex; align-items: center; gap: 14px; padding: 16px 30px;
   border-bottom: 1px solid var(--line); background: var(--head);
@@ -396,7 +396,10 @@ select.input option { background: var(--input); color: var(--ink); }
 
 /* ---------- barre gelée commune (viewbar) ---------- */
 
-.vbar { position: sticky; top: 74px; z-index: 5; display: flex; gap: 10px;
+/* `top` négatif = exactement le padding-top de `.screen` (26px) : le seuil de collage se
+   compte depuis le bord intérieur (padding compris) de `.screen`, donc sans ce décalage la
+   barre se fige 26px trop bas, sous un interstice visible pendant le défilement. */
+.vbar { position: sticky; top: -26px; z-index: 5; display: flex; gap: 10px;
   align-items: center; padding: 10px 0 14px; background: var(--bg); }
 .vb-views { display: flex; border: 1px solid var(--line3); }
 .vb-views button { width: 34px; height: 34px; display: grid; place-items: center;
