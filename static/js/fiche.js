@@ -281,7 +281,17 @@ export async function openFiche(refId, { onClose } = {}) {
   // ---------- écriture ----------
 
   async function recharge() {
-    p = await apiGet(`/api/refs/${refId}?lieu=${lieuQuery()}`);
+    try {
+      p = await apiGet(`/api/refs/${refId}?lieu=${lieuQuery()}`);
+    } catch (e) {
+      // plus lisible (supprimée ailleurs, serveur muet) : fermer vaut mieux
+      // que garder à l'écran des valeurs périmées
+      dialogue = true;
+      await alertModal({ title: 'Fiche indisponible', body: e.message });
+      dialogue = false;
+      termine();
+      return;
+    }
     marge = p.marge;
     paint();
   }
@@ -290,12 +300,18 @@ export async function openFiche(refId, { onClose } = {}) {
     try {
       await apiSend('PATCH', `/api/refs/${refId}`, body);
     } catch (e) {
-      dialogue = true;
-      await alertModal({ title: 'Enregistrement impossible', body: e.message });
-      ouvre();
-      dialogue = false;
+      await echec('Enregistrement impossible', e);
     }
     await recharge();
+  }
+
+  // Un appel réseau qui échoue laisserait l'écran nu : la confirmation ou l'alerte a
+  // remplacé la fiche dans la pile. On prévient, puis on repose la fiche.
+  async function echec(titre, e) {
+    dialogue = true;
+    await alertModal({ title: titre, body: e.message });
+    ouvre();
+    dialogue = false;
   }
 
   function paint() {
@@ -329,7 +345,12 @@ export async function openFiche(refId, { onClose } = {}) {
       body: 'La référence disparaît de la cave et des listes. Les recettes qui l’utilisent devront être corrigées.',
     });
     if (!ok) { ouvre(); dialogue = false; return; }
-    await apiSend('DELETE', `/api/refs/${refId}`);
+    try {
+      await apiSend('DELETE', `/api/refs/${refId}`);
+    } catch (e) {
+      await echec('Suppression impossible', e);
+      return;
+    }
     dialogue = false;
     termine();
   }
