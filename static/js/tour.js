@@ -36,12 +36,12 @@ const STEPS = {
       'Seules les lignes touchées sont enregistrées : vous pouvez ne compter qu’une partie de la cave et revenir plus tard.'],
   ],
   cocktails: [
-    ['.chip-sort', 'Ordonner la carte',
-      'Par nom, par prix, par marge ou par date de création. Le tri ne change que l’affichage.'],
-    ['[data-ing-add]', 'La recette',
-      'Chaque ingrédient est une référence de la cave, en centilitres pour les bouteilles suivies, en unités pour les garnitures. Le coût matière se recalcule à chaque changement.'],
-    ['[data-apply]', 'Le prix conseillé',
-      'Le prix qui tient la marge cible de la maison compte tenu du coût matière. Le curseur au-dessus permet de s’en écarter, la carte passe en rouge sous le plancher de marge.'],
+    ['[data-vb-q]', 'Chercher',
+      'Le nom ou la description d’une recette. Les accents et les majuscules n’ont pas d’importance.'],
+    ['.vb-views', 'Table ou blocs',
+      'Basculez entre la table (colonnes triables, sélection multiple) et les cartes. Tri, groupement par famille vivent dans la même barre.'],
+    ['.bloc', 'Une carte, une recette',
+      'Cliquez la carte (ou la ligne, en vue table) pour ouvrir sa fiche : composition, prix conseillé et faisabilité au stock.'],
   ],
   menus: [
     ['[data-menu-nom]', 'Une carte, des recettes',
