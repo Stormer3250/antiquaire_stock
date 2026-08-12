@@ -370,6 +370,9 @@ select.input option { background: var(--input); color: var(--ink); }
   display: grid; grid-template-columns: 1fr 1.15fr; gap: 16px;
   padding: 0 22px 20px; align-items: start;
 }
+/* Recette : la composition (ingrédients) a besoin de plus de large que la tarification,
+   contrairement aux autres fiches (fiche.js) qui restent sur le 1fr/1.15fr par défaut. */
+.fiche-deux.fiche-deux-recette { grid-template-columns: 1.35fr 1fr; }
 .modal.fiche .modal-foot { flex: 0 0 auto; }
 .modal-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); flex: 0 0 auto; }
 .modal-tabs button { padding: 11px 18px; background: transparent; border: none;
@@ -435,15 +438,6 @@ select.input option { background: var(--input); color: var(--ink); }
 .th-arrow { font-size: 9px; opacity: .9; }
 .created-at { font-size: 10.5px; color: var(--mut3); white-space: nowrap; }
 .row-actions { align-items: center; }
-
-/* puces de tri de la colonne des fiches */
-.chip-sort {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
-  padding: 4px 8px; background: transparent; color: var(--mut3);
-  border: 1px solid var(--line2); cursor: pointer;
-}
-.chip-sort:hover { color: var(--ink); border-color: var(--line); }
-.chip-sort.active { color: var(--ac); border-color: var(--ac); }
 
 /* ---------- sélecteurs maison ---------- */
 .cc-sel { position: relative; width: 100%; }
