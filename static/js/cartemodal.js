@@ -12,7 +12,7 @@
 //     modal-root) : on pose `dialogue = true` et on rouvre la carte après, comme ailleurs.
 
 import { apiGet, apiSend } from './api.js';
-import { esc, eur, num, pc, openModal, closeModal, confirmModal, alertModal } from './ui.js';
+import { esc, eur, num, pc, parseNum, openModal, closeModal, confirmModal, alertModal } from './ui.js';
 import { S } from './app.js';
 import { renderTable, bindTable, tableState } from './table.js';
 import { openOptimiser } from './optimiser.js';
@@ -538,8 +538,11 @@ export async function openCarte(menuId, { onClose } = {}) {
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
       inp.addEventListener('blur', async () => {
         const cid = Number(inp.dataset.prix);
-        const v = parseFloat(inp.value.replace(',', '.'));
-        if (Number.isNaN(v)) { await recharge(); return; }
+        // parseNum, pas parseFloat : au-dessus de mille, num() sépare les milliers par une
+        // espace fine insécable — parseFloat lisait « 1 500,00 » comme 1 et écrasait le prix
+        const brut = inp.value.trim();
+        const v = parseNum(brut);
+        if (!brut || v <= 0) { await recharge(); return; }
         const c = menu.cocktails.find((x) => x.id === cid);
         if (!c || Math.abs(v - prixDe(c)) < 0.005) return;
         const t = tarifCourant();
