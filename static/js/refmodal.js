@@ -2,7 +2,7 @@
 // L'édition, elle, se fait dans la fiche unifiée (fiche.js) : ici on ne fait que créer.
 
 import { apiSend } from './api.js';
-import { esc, parseNum, openModal, closeModal, alertModal } from './ui.js';
+import { esc, parseNum, openModal, closeModal, setEscape, alertModal } from './ui.js';
 import { S, refresh } from './app.js';
 
 function options(list, selected) {
@@ -19,8 +19,11 @@ function fieldHtml(f, value) {
   </div>`;
 }
 
-// onSaved(refId) : rappel après création ; suivi : type par défaut
-export function openRefModal({ suivi = true, onSaved = null } = {}) {
+// onSaved(refId) : rappel après création ; suivi : type par défaut.
+// onClose : rappel si la modale se ferme SANS création (annuler, ×, Échap, clic dehors).
+// Nécessaire quand l'appelant est lui-même une modale (elle partage modal-root et doit
+// se repeindre après coup, sinon elle reste invisible) ; les écrans n'en ont pas besoin.
+export function openRefModal({ suivi = true, onSaved = null, onClose = null } = {}) {
   const catOptions = () =>
     S.meta.categories
       .filter((c) => !['Consommable', 'Garniture & épices'].includes(c.nom))
@@ -155,12 +158,27 @@ export function openRefModal({ suivi = true, onSaved = null } = {}) {
     modal.querySelector('[data-four]').addEventListener('change', (e) => { state.four = e.target.value; });
     const dr = modal.querySelector('[data-droits]');
     if (dr) dr.addEventListener('change', () => { state.droits = dr.checked; });
-    modal.querySelector('[data-cancel]').addEventListener('click', closeModal);
+    modal.querySelector('[data-cancel]').addEventListener('click', fermer);
     modal.querySelector('[data-save]').addEventListener('click', save);
   }
 
+  function fermer() {
+    closeModal();
+    onClose?.();
+  }
+
   function rerender() {
-    bind(openModal(html()));
+    const modal = openModal(html());
+    if (onClose) {
+      // openModal a déjà câblé × / Échap / clic dehors sur le closeModal nu ; on les
+      // fait passer par fermer() en plus, pour prévenir l'appelant.
+      setEscape(fermer);
+      modal.querySelector('.modal-x').addEventListener('click', fermer);
+      modal.closest('.scrim').addEventListener('mousedown', (e) => {
+        if (e.target === modal.closest('.scrim')) fermer();
+      });
+    }
+    bind(modal);
   }
 
   async function save() {
