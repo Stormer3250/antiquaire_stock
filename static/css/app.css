@@ -46,12 +46,34 @@ input[type=range] { accent-color: var(--ac); }
 .app { display: flex; min-height: 100vh; }
 
 .side {
-  width: 246px; flex: 0 0 246px;
+  width: 64px; flex: 0 0 64px;
   background: var(--side); border-right: 1px solid var(--line);
   display: flex; flex-direction: column; padding: 22px 0 14px;
-  position: sticky; top: 0; height: 100vh;
+  position: sticky; top: 0; height: 100vh; z-index: 30;
+  transition: width .16s ease, flex-basis .16s ease;
 }
+/* Ouverture au clic, jamais au survol : une barre qui s'ouvre toute seule recouvre les
+   boutons situés juste à sa droite et leur vole le clic. Elle pousse le contenu. */
+body.nav-epinglee .side { width: 246px; flex: 0 0 246px; }
+.side .lib, .side .brand-txt, .side .side-foot { display: none; }
+body.nav-epinglee .side .lib { display: inline; }
+body.nav-epinglee .side .brand-txt, body.nav-epinglee .side .side-foot { display: flex; }
+body.nav-epinglee .side .brand-txt { display: block; }
+.side .side-foot, .side .brand-txt { white-space: nowrap; }
+.side .brand { justify-content: center; padding: 0 10px 22px; }
+body.nav-epinglee .side .brand { justify-content: flex-start; padding: 0 20px 22px; }
+.side-nav button { justify-content: center; }
+body.nav-epinglee .side-nav button { justify-content: flex-start; }
+.pin {
+  margin: auto auto 0; background: transparent; border: 1px solid var(--line);
+  color: var(--mut3); cursor: pointer; padding: 7px 9px; line-height: 0;
+}
+body.nav-epinglee .pin { margin: 0 20px 0 auto; }
+.pin:hover { color: var(--ac); border-color: var(--ac); }
+.pin .ic { transition: transform .16s ease; }
+body.nav-epinglee .pin .ic { transform: rotate(180deg); }
 .brand { display: flex; align-items: center; gap: 12px; padding: 0 20px 22px; }
+.brand-mark { flex: 0 0 auto; }
 .brand-mark {
   width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--ac);
   display: grid; place-items: center; font-family: var(--serif); font-size: 20px; color: var(--ac);
@@ -69,11 +91,14 @@ input[type=range] { accent-color: var(--ac); }
   font-family: var(--sans); font-size: 13.5px; cursor: pointer;
 }
 .side-nav button:hover { background: #191413; color: var(--ink); }
-.side-nav button .num { font-family: var(--mono); font-size: 10px; color: var(--mut3); }
+.side-nav button .ic { flex: 0 0 auto; color: var(--mut3); }
+.side-nav button .lib { white-space: nowrap; }
+.side-nav button.active .ic { color: var(--ac); }
+.side-nav button:hover .ic { color: var(--ink); }
 .side-nav button.active {
   background: var(--panel2); border-left-color: var(--ac); color: var(--ink);
 }
-.side-nav button.active .num { color: var(--ac); }
+
 .side-foot {
   margin-top: auto; padding: 16px 20px 0; border-top: 1px solid #241D19;
   display: flex; flex-direction: column; gap: 8px;
@@ -413,10 +438,14 @@ select.input option { background: var(--input); color: var(--ink); }
 }
 
 /* ---------- visite guidée ---------- */
-.tour-overlay {
-  position: fixed; z-index: 200; pointer-events: auto; border: 1px solid var(--ac);
-  box-shadow: 0 0 0 9999px rgba(8, 6, 5, .74); transition: all .18s ease;
+/* Mise en lumière : la découpe est portée par l'élément éclairé lui-même, elle épouse
+   donc sa bordure et suit le défilement sans code. */
+.cc-dim { overflow-x: hidden; }
+.cc-lit {
+  position: relative; z-index: 300; border-radius: 1px;
+  box-shadow: 0 0 0 3px var(--ac), 0 0 0 9999px rgba(8, 6, 5, .78);
 }
+.cc-lit-secondaire { box-shadow: 0 0 0 3px var(--ac); }
 .tour-bubble {
   position: fixed; z-index: 201; width: min(380px, 90vw); background: var(--panel);
   border: 1px solid var(--ac); box-shadow: 0 20px 50px rgba(0, 0, 0, .6);
@@ -441,9 +470,9 @@ select.input option { background: var(--input); color: var(--ink); }
 .tick input { accent-color: var(--ac); cursor: pointer; }
 .trow.picked { background: var(--panel2); box-shadow: inset 2px 0 0 var(--ac); }
 .table-summary {
-  position: sticky; bottom: 0; z-index: 5;
+  position: sticky; top: 0; z-index: 6;
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-  padding: 12px 20px; background: var(--panel2); border-top: 1px solid var(--ac);
+  padding: 12px 20px; background: var(--panel2); border-bottom: 1px solid var(--ac);
 }
 .sum-figs { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--mut); }
 .sum-figs b { color: var(--ink); font-size: 12.5px; margin-left: 5px; }
@@ -481,3 +510,41 @@ select.input option { background: var(--input); color: var(--ink); }
 .cmp-marge { display: block; font-size: 10.5px; color: var(--mut3); }
 /* [hidden] perd contre display:flex : il faut le dire explicitement */
 .table-summary[hidden] { display: none; }
+.cc-dim .tour-bubble, .cc-dim .scrim { z-index: 400; }
+
+
+/* ---------- interrupteur maison (remplace les cases à cocher natives) ---------- */
+.cc-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; }
+.cc-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.cc-switch .piste {
+  width: 34px; height: 18px; flex: 0 0 auto; border: 1px solid var(--line);
+  background: var(--panel); position: relative; transition: border-color .12s, background .12s;
+}
+.cc-switch .piste::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px;
+  background: var(--mut3); transition: transform .14s ease, background .14s ease;
+}
+.cc-switch input:checked + .piste { border-color: var(--ac); background: #1B2412; }
+.cc-switch input:checked + .piste::after { transform: translateX(16px); background: var(--ac); }
+.cc-switch input:focus-visible + .piste { outline: 1px solid var(--ac); outline-offset: 2px; }
+.cc-switch .txt { font-size: 12.5px; color: var(--mut); }
+.icon-btn .ic { display: block; }
+
+/* ---------- curseur de niveau de bouteille ---------- */
+.niveau { align-items: center; }
+.niveau input[type="range"] { flex: 1; min-width: 90px; accent-color: var(--ac); }
+.niveau-val { font-size: 11.5px; color: var(--mut2); min-width: 46px; text-align: right; }
+.seg[hidden] { display: none; }
+
+/* « ajouter un ingrédient » est l'acte courant ; créer une référence est une sortie de
+   route, on la range visuellement en dessous */
+.creer-ref { align-items: center; }
+.creer-ref .mono-label { color: var(--mut3); }
+.creer-ref .btn { font-size: 10px; padding: 5px 9px; }
+
+/* les cartes où figure une recette */
+.chip-carte {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em; padding: 4px 8px;
+  border: 1px solid var(--line); color: var(--mut2);
+}
+.chip-carte.premiere { border-color: var(--ac); color: var(--ac); }

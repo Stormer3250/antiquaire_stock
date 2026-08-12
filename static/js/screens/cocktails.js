@@ -1,4 +1,4 @@
-// Cartes & recettes : liste des fiches, éditeur, coût matière, marge, faisabilité.
+// Recettes : liste, éditeur, coût matière, marge, faisabilité.
 
 import { apiGet, apiSend } from '../api.js';
 import { esc, eur, num, pc, confirmModal, alertModal } from '../ui.js';
@@ -7,10 +7,10 @@ import { openRefModal } from '../refmodal.js';
 import { applySort, bindSort } from '../sortable.js';
 import { tableState } from '../table.js';
 
-let sel = null;                    // fiche ouverte dans l'éditeur
-const T = 'cocktails';             // tri et fiches cochées, tenus par table.js
+let sel = null;                    // recette ouverte dans l'éditeur
+const T = 'recettes';              // tri et recettes cochées, tenus par table.js
 
-// Ce que l'on veut savoir d'un paquet de fiches : ce qu'il rapporte et à quel point
+// Ce que l'on veut savoir d'un paquet de recettes : ce qu'il rapporte et à quel point
 // ses prix sont dispersés. C'est la même mesure que la phase des menus reprendra.
 function cartesSummary(picked) {
   const moy = (f) => picked.reduce((a, x) => a + f(x), 0) / picked.length;
@@ -20,7 +20,7 @@ function cartesSummary(picked) {
   return `
   <div class="table-summary" style="flex-direction:column; align-items:stretch; gap:9px;">
     <div class="sum-figs" style="flex-direction:column; gap:7px;">
-      <span class="sum-count">${picked.length} fiche${picked.length > 1 ? 's' : ''} retenue${picked.length > 1 ? 's' : ''}</span>
+      <span class="sum-count">${picked.length} recette${picked.length > 1 ? 's' : ''} retenue${picked.length > 1 ? 's' : ''}</span>
       <span>Marge moyenne <b class="num">${pc(moy((x) => x.marge), 1)}</b></span>
       <span>Prix moyen <b class="num">${eur(moy((x) => x.prix_ttc))}</b></span>
       <span>Coût matière moyen <b class="num">${eur(moy((x) => x.cost))}</b></span>
@@ -56,7 +56,7 @@ export async function render(el) {
   <div class="panel">
     <div style="padding:14px 18px; border-bottom:1px solid var(--line); display:flex;
       flex-direction:column; gap:9px;">
-      <div class="mono-label">Carte · ${cocktails.length} fiche${cocktails.length > 1 ? 's' : ''}</div>
+      <div class="mono-label">Recettes · ${cocktails.length}</div>
       <div class="row" style="gap:6px; flex-wrap:wrap;">
         ${[['nom', 'Nom'], ['prix_ttc', 'Prix'], ['marge', 'Marge'], ['created_at', 'Créée le']]
           .map(([k, label]) => `<button class="chip-sort ${SORT.key === k ? 'active' : ''}"
@@ -68,7 +68,7 @@ export async function render(el) {
     <div class="row" style="border-left:2px solid ${c && x.id === c.id ? 'var(--ac)' : 'transparent'};
       border-bottom:1px solid var(--line2); background:${c && x.id === c.id ? 'var(--panel2)' : 'transparent'}; gap:0;">
       <label class="tick" style="padding-left:10px;"><input type="checkbox" data-tick="${x.id}"
-        ${state.selected.has(x.id) ? 'checked' : ''} aria-label="Retenir cette fiche"></label>
+        ${state.selected.has(x.id) ? 'checked' : ''} aria-label="Retenir cette recette"></label>
       <button data-pick="${x.id}" style="flex:1; min-width:0; text-align:left; padding:13px 8px 13px 16px;
         background:transparent; border:none; color:${c && x.id === c.id ? 'var(--ink)' : 'var(--mut)'};
         font-family:var(--sans); cursor:pointer;">
@@ -80,7 +80,7 @@ export async function render(el) {
     </div>`).join('')}
     <button data-new style="display:block; width:100%; padding:13px 18px; background:transparent; border:none;
       color:var(--ac); text-align:left; font-family:var(--mono); font-size:11px; letter-spacing:.1em;
-      text-transform:uppercase; cursor:pointer;">+ Nouvelle fiche</button>
+      text-transform:uppercase; cursor:pointer;">+ Nouvelle recette</button>
     ${picked.length ? cartesSummary(picked) : ''}
   </div>`;
 
@@ -96,8 +96,9 @@ export async function render(el) {
       ...tracked.map((r) => opt(r, r.nom)),
       ...untracked.map((r) => opt(r, `${r.nom} · ${r.unite}`)),
       ...conso.map((r) => opt(r, r.nom)),
-      `<option value="__new">+ Créer une référence suivie…</option>`,
-      `<option value="__newuntracked">+ Créer une garniture non suivie…</option>`,
+      `<option disabled>──────────</option>`,
+      `<option value="__new">Créer une référence suivie…</option>`,
+      `<option value="__newuntracked">Créer une garniture…</option>`,
     ].join('');
   }
 
@@ -108,8 +109,8 @@ export async function render(el) {
   };
 
   const editorHtml = c === null
-    ? `<div class="panel"><div class="empty-note">Aucune fiche à la carte. Créez la première
-        avec « + Nouvelle fiche » à gauche.</div></div>`
+    ? `<div class="panel"><div class="empty-note">Aucune recette. Créez la première
+        avec « + Nouvelle recette » à gauche.</div></div>`
     : `
   <div class="panel">
     <div style="padding:20px 22px 16px; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:12px;">
@@ -144,10 +145,13 @@ export async function render(el) {
       <button class="icon-btn danger" data-ing-del="${idx}" style="justify-self:end;" aria-label="Retirer">×</button>
     </div>`).join('')}
     <div class="row spread" style="padding:13px 22px; align-items:flex-start; gap:14px;">
-      <div class="row wrap" style="gap:8px; flex:1; min-width:0;">
-        <button class="btn" data-ing-add style="border-style:dashed;">+ Ingrédient</button>
-        <button class="btn muted" data-new-tracked style="border-style:dashed;">+ Référence suivie</button>
-        <button class="btn muted" data-new-untracked style="border-style:dashed;">+ Garniture</button>
+      <div class="stack" style="gap:8px; flex:1; min-width:0;">
+        <button class="btn-solid" data-ing-add>+ Ajouter un ingrédient</button>
+        <div class="row wrap creer-ref" style="gap:8px;">
+          <span class="mono-label">Pas encore en cave ?</span>
+          <button class="btn muted" data-new-tracked>Créer une référence suivie</button>
+          <button class="btn muted" data-new-untracked>Créer une garniture</button>
+        </div>
       </div>
       <div class="row" style="gap:12px; align-items:baseline; flex:0 0 auto; white-space:nowrap;">
         <span style="font-size:12.5px; color:var(--mut2);">Coût matière</span>
@@ -160,7 +164,7 @@ export async function render(el) {
   <div class="stack" style="gap:14px;">
     <div class="${c.ok ? 'card-ok' : 'card-warn'}" style="padding:22px; display:flex; flex-direction:column; gap:16px;">
       <div class="row spread" style="align-items:baseline;">
-        <div class="mono-label">${c.ok ? 'Prix carte TTC' : `Sous le plancher ${pc(pr.min)}`}</div>
+        <div class="mono-label">${c.ok ? 'Prix TTC' : `Sous le plancher ${pc(pr.min)}`}</div>
         <div style="font-family:var(--serif); font-size:38px; line-height:1;">${eur(c.prix_ttc)}</div>
       </div>
       <input type="range" min="8" max="30" step="0.5" value="${c.prix_ttc}" data-price style="width:100%;">
@@ -175,21 +179,32 @@ export async function render(el) {
         <div class="num" style="font-size:13px;">${m.v}</div>
       </div>`).join('')}
     </div>
+    <div class="panel" style="padding:18px 20px; display:flex; flex-direction:column; gap:8px;">
+      <div class="mono-label" style="color:var(--mut2);">Sur quelles cartes</div>
+      ${c.cartes && c.cartes.length
+        ? `<div class="row wrap" style="gap:6px;">${c.cartes.map((x, i) => `
+            <span class="chip-carte ${i === 0 ? 'premiere' : ''}"
+              title="${i === 0 ? 'C’est cette carte qui donne le prix affiché ailleurs' : ''}">${esc(x.nom)}</span>`).join('')}</div>
+           ${c.cartes.length > 1
+             ? `<div class="sub pretty">Hors carte, c’est « ${esc(c.cartes[0].nom)} » qui donne le prix.</div>`
+             : ''}`
+        : `<div class="sub pretty">Sur aucune carte : cette recette applique son prix propre.</div>`}
+    </div>
     <div class="panel" style="padding:20px; display:flex; flex-direction:column; gap:11px;">
       <div class="mono-label" style="color:var(--mut2);">Prix conseillé</div>
       <div style="font-size:13px; color:var(--mut);" class="pretty">Pour tenir la marge
-        ${c.marge_custom ? 'propre à cette fiche' : 'cible de la maison'} de
+        ${c.marge_custom ? 'propre à cette recette' : 'cible de la maison'} de
         ${pc(c.marge_cible)}, elle se vend <span class="accent">${eur(c.suggested)}</span>.</div>
       <div class="row" style="gap:10px; align-items:flex-end;">
-        <div class="field grow"><div class="mono-label">Marge visée par cette fiche</div>
+        <div class="field grow"><div class="mono-label">Marge visée par cette recette</div>
           <input class="input num" data-marge value="${c.marge_custom ? num(c.marge_cible, 0) : ''}"
             placeholder="${num(pr.cible, 0)} · cible maison" aria-label="Marge visée"></div>
         <button class="btn" data-apply>Appliquer ce prix</button>
       </div>
-      <label class="row" style="gap:9px; cursor:pointer; padding-top:4px;">
-        <input type="checkbox" data-fixe ${c.prix_fixe ? 'checked' : ''} style="accent-color:var(--ac);">
-        <span style="font-size:12.5px; color:var(--mut);">Prix figé : ne pas le déplacer,
-          même lors d’un réglage d’ensemble de la carte</span>
+      <label class="cc-switch" style="padding-top:4px;">
+        <input type="checkbox" data-fixe ${c.prix_fixe ? 'checked' : ''}>
+        <span class="piste"></span>
+        <span class="txt">Prix figé : le réglage d’ensemble d’une carte ne le déplacera pas</span>
       </label>
     </div>
     <div class="panel" style="padding:20px; display:flex; flex-direction:column; gap:10px;">
@@ -235,7 +250,7 @@ export async function render(el) {
       const x = cocktails.find((y) => y.id === Number(b.dataset.del));
       const ok = await confirmModal({
         title: `Supprimer « ${x.nom} » ?`,
-        body: 'La fiche et son chiffrage seront perdus.',
+        body: 'La recette et son chiffrage seront perdus. Elle disparaît des cartes où elle figure.',
       });
       if (!ok) return;
       await apiSend('DELETE', `/api/cocktails/${x.id}`);
@@ -314,7 +329,7 @@ export async function render(el) {
     if (!first) {
       await alertModal({
         title: 'Aucune référence suivie',
-        body: 'Créez une référence suivie avant d’ajouter un ingrédient à une fiche.',
+        body: 'Créez une référence suivie avant d’ajouter un ingrédient à une recette.',
       });
       return;
     }

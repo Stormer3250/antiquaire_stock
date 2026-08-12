@@ -230,7 +230,7 @@ export async function render(el, state) {
   el.querySelector('[data-remove]').addEventListener('click', async () => {
     const ok = await confirmModal({
       title: `Supprimer ${p.nom} ?`,
-      body: 'La référence disparaît de la cave et des listes. Les fiches cocktails qui l’utilisent devront être corrigées.',
+      body: 'La référence disparaît de la cave et des listes. Les recettes qui l’utilisent devront être corrigées.',
     });
     if (!ok) return;
     await apiSend('DELETE', `/api/refs/${p.id}`);

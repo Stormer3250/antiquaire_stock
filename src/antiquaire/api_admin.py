@@ -15,25 +15,40 @@ router = APIRouter()
 
 
 def active_prices(conn: sqlite3.Connection) -> dict[int, float]:
-    """Prix issus de la tarification active du menu de chaque fiche.
+    """Prix issus de la tarification active de la carte de chaque recette.
 
     Seul endroit où la question « quel prix s'applique » est tranchée : tout le reste
-    (registre, comptoir, marges) lit à travers, sans savoir que les menus existent.
+    (registre, comptoir, marges) lit à travers, sans savoir que les cartes existent.
+
+    Une recette peut figurer sur plusieurs cartes : c'est alors la PREMIÈRE carte dans
+    l'ordre d'affichage qui donne le prix. Règle arbitraire mais déterministe, et
+    l'écran affiche toujours de quelle carte vient le nombre.
     """
     rows = conn.execute(
         """SELECT tp.cocktail_id, tp.prix_ttc
-           FROM tarif_prix tp JOIN tarifs t ON t.id = tp.tarif_id
-           WHERE t.actif = 1"""
+           FROM tarif_prix tp
+           JOIN tarifs t ON t.id = tp.tarif_id AND t.actif = 1
+           JOIN menu_items mi ON mi.menu_id = t.menu_id AND mi.cocktail_id = tp.cocktail_id
+           JOIN menus m ON m.id = t.menu_id AND m.active = 1
+           ORDER BY m.position, m.id"""
     )
-    return {r["cocktail_id"]: r["prix_ttc"] for r in rows}
+    out: dict[int, float] = {}
+    for r in rows:
+        out.setdefault(r["cocktail_id"], r["prix_ttc"])  # la première carte l'emporte
+    return out
 
 
-def menu_of(conn: sqlite3.Connection) -> dict[int, tuple[int, str]]:
+def menu_of(conn: sqlite3.Connection) -> dict[int, list[tuple[int, str]]]:
+    """Cartes de chaque recette, dans l'ordre d'affichage. La première donne le prix."""
     rows = conn.execute(
         """SELECT mi.cocktail_id, m.id, m.nom FROM menu_items mi
-           JOIN menus m ON m.id = mi.menu_id WHERE m.active = 1"""
+           JOIN menus m ON m.id = mi.menu_id WHERE m.active = 1
+           ORDER BY m.position, m.id"""
     )
-    return {r["cocktail_id"]: (r[1], r[2]) for r in rows}
+    out: dict[int, list[tuple[int, str]]] = {}
+    for r in rows:
+        out.setdefault(r["cocktail_id"], []).append((r[1], r[2]))
+    return out
 
 
 def cost_per_cl(ref: dict, cat: dict, rates: dict) -> float:
@@ -103,7 +118,7 @@ def serialize_cocktail(
     menus = menus if menus is not None else {}
     depuis_tarif = cocktail["id"] in prix_actifs
     prix = prix_actifs.get(cocktail["id"], cocktail["prix_ttc"])
-    menu = menus.get(cocktail["id"])
+    cartes = menus.get(cocktail["id"], [])
     ht = prix / 1.2
     marge = (ht - cost) / ht * 100 if ht > 0 else 0.0
     feas = pricing.feasibility(feas_lines)
@@ -119,8 +134,9 @@ def serialize_cocktail(
         "prix_ttc": prix,
         "prix_source": "tarif" if depuis_tarif else "fiche",
         "prix_fiche": cocktail["prix_ttc"],
-        "menu_id": menu[0] if menu else None,
-        "menu_nom": menu[1] if menu else None,
+        "menu_id": cartes[0][0] if cartes else None,
+        "menu_nom": cartes[0][1] if cartes else None,
+        "cartes": [{"id": c[0], "nom": c[1]} for c in cartes],
         "ings": ings,
         "cost": cost,
         "prix_ht": ht,

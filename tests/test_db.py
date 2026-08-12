@@ -73,13 +73,16 @@ def test_migration_005_menus(conn):
     assert {"menus", "menu_items", "tarifs", "tarif_prix"} <= tables
 
 
-def test_a_cocktail_belongs_to_at_most_one_menu(conn):
+def test_a_recipe_can_appear_on_several_cartes(conn):
+    """Depuis la 007 : plusieurs cartes, oui ; deux fois la même carte, non."""
     conn.execute("INSERT INTO menus (nom, created_at) VALUES ('Carte', '2026-01-01')")
     conn.execute("INSERT INTO menus (nom, created_at) VALUES ('Été', '2026-01-01')")
     conn.execute("INSERT INTO cocktails (nom, created_at) VALUES ('Negroni', '2026-01-01')")
     conn.execute("INSERT INTO menu_items (menu_id, cocktail_id) VALUES (1, 1)")
+    conn.execute("INSERT INTO menu_items (menu_id, cocktail_id) VALUES (2, 1)")
+    assert conn.execute("SELECT count(*) FROM menu_items").fetchone()[0] == 2
     with pytest.raises(sqlite3.IntegrityError):
-        conn.execute("INSERT INTO menu_items (menu_id, cocktail_id) VALUES (2, 1)")
+        conn.execute("INSERT INTO menu_items (menu_id, cocktail_id) VALUES (1, 1)")
 
 
 def test_deleting_a_menu_keeps_its_cocktails(conn):

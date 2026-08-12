@@ -89,12 +89,10 @@ def menus_list(conn: Conn, lieu: str | None = None):
             }
         )
 
-    libres = conn.execute(
-        """SELECT c.* FROM cocktails c
-           LEFT JOIN menu_items mi ON mi.cocktail_id = c.id
-           WHERE c.active = 1 AND mi.id IS NULL ORDER BY c.nom"""
-    ).fetchall()
-    return {"menus": out, "hors_menu": [fiche(r) for r in libres]}
+    # « hors_menu » n'a plus de sens maintenant qu'une recette peut être sur plusieurs
+    # cartes : on renvoie toutes les recettes, l'écran retire celles déjà présentes.
+    toutes = conn.execute("SELECT * FROM cocktails WHERE active = 1 ORDER BY nom").fetchall()
+    return {"menus": out, "recettes": [fiche(r) for r in toutes]}
 
 
 @router.post("/menus")
@@ -115,19 +113,10 @@ def menu_patch(mid: int, conn: Conn, body: dict = Body(...)):
     if fields:
         sets = ", ".join(f"{k} = ?" for k in fields)
         conn.execute(f"UPDATE menus SET {sets} WHERE id = ?", [*fields.values(), mid])
-    # cocktail_ids porte l'appartenance ET l'ordre : on réécrit la liste telle quelle
+    # cocktail_ids porte l'appartenance ET l'ordre : on réécrit la liste telle quelle.
+    # Une recette peut figurer sur plusieurs cartes ; deux fois sur la même, non.
     if "cocktail_ids" in body:
-        ids = [int(x) for x in body["cocktail_ids"]]
-        pris = conn.execute(
-            f"""SELECT cocktail_id FROM menu_items
-                WHERE menu_id != ? AND cocktail_id IN ({",".join("?" * len(ids)) or "NULL"})""",
-            (mid, *ids),
-        ).fetchall()
-        if pris:
-            conn.rollback()
-            raise HTTPException(
-                422, "une fiche appartient déjà à un autre menu : retirez-la d'abord"
-            )
+        ids = list(dict.fromkeys(int(x) for x in body["cocktail_ids"]))
         conn.execute("DELETE FROM menu_items WHERE menu_id = ?", (mid,))
         for pos, cid in enumerate(ids):
             conn.execute(

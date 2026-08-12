@@ -75,8 +75,11 @@ export function renderTable(el, spec) {
         ${spec.columns.map((c) => cellHtml(c, r)).join('')}
       </div>`).join('');
 
-  el.innerHTML = `${head}${body}
+  // La synthèse est posée AVANT l'en-tête : ce que l'on vient de cocher se lit tout de
+  // suite, sans descendre au bas d'une table de trois cents lignes.
+  el.innerHTML = `
     ${spec.select ? '<div class="table-summary" data-summary hidden></div>' : ''}
+    ${head}${body}
     ${spec.foot ? `<div class="panel-foot">${spec.foot}</div>` : ''}`;
 
   paintSummary(el, spec, rows, state);

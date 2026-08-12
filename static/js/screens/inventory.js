@@ -7,13 +7,10 @@ import { sortState, applySort, sortHeader, bindSort } from '../sortable.js';
 
 const SORT = sortState('nom');
 
-const LEVELS = [
-  { v: 0, label: 'vide' },
-  { v: 0.25, label: '¼' },
-  { v: 0.5, label: '½' },
-  { v: 0.75, label: '¾' },
-  { v: 1, label: 'pleine' },
-];
+// Le niveau de la bouteille entamée, en dixièmes : plus juste que quatre crans, et un
+// curseur se règle d'un geste au comptoir.
+const CRANS = 10;
+const etiquette = (d) => (d === 0 ? 'vide' : d === CRANS ? 'pleine' : `${d}/10`);
 
 // session de comptage en cours, par lieu : Map<refId, {level, fulls}>
 const sessions = {};
@@ -64,9 +61,10 @@ export async function render(el) {
         <div class="nom">${esc(r.nom)}</div>
         <div class="sub">${esc(r.marque)} · théorique ${num(r.stock, r.stock % 1 ? 2 : 0)}</div>
       </div>
-      <div class="row" style="gap:5px;">
-        ${LEVELS.map((l) => `
-        <button data-level="${l.v}" class="level-btn ${t && t.level === l.v ? 'on' : ''}">${l.label}</button>`).join('')}
+      <div class="row niveau" style="gap:10px;">
+        <input type="range" min="0" max="${CRANS}" step="1" data-level
+          value="${t ? Math.round(t.level * CRANS) : 0}" aria-label="Niveau de la bouteille ouverte">
+        <span class="niveau-val num">${t ? etiquette(Math.round(t.level * CRANS)) : '·'}</span>
       </div>
       <div class="stepper" style="justify-content:flex-end;">
         <button data-minus>–</button>
@@ -97,7 +95,7 @@ export async function render(el) {
 
   el.innerHTML = `
   <div style="display:grid; grid-template-columns:1fr 300px; gap:18px; align-items:start;">
-    <div class="panel">
+    <div class="panel" data-section="comptage">
       <div class="thead" style="grid-template-columns:2fr 1.6fr .8fr .8fr;">
         ${sortHeader('Référence', 'nom', SORT)}
         <div>Niveau de la bouteille ouverte</div>
@@ -137,13 +135,15 @@ export async function render(el) {
 
   function bindRow(node) {
     const refId = Number(node.dataset.row);
-    node.querySelectorAll('[data-level]').forEach((b) =>
-      b.addEventListener('click', () => {
-        const t = touch(refId);
-        t.level = Number(b.dataset.level);
-        repaintRow(refId);
-      })
-    );
+    const curseur = node.querySelector('[data-level]');
+    // pendant le glissement on ne réécrit que l'étiquette : re-générer la ligne à
+    // chaque pixel ferait perdre la prise sur le curseur
+    curseur.addEventListener('input', () => {
+      const t = touch(refId);
+      t.level = Number(curseur.value) / CRANS;
+      node.querySelector('.niveau-val').textContent = etiquette(Number(curseur.value));
+    });
+    curseur.addEventListener('change', () => repaintRow(refId));
     node.querySelector('[data-minus]').addEventListener('click', () => {
       const t = touch(refId);
       t.fulls = Math.max(0, t.fulls - 1);

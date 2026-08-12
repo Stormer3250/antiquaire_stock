@@ -1,6 +1,7 @@
 // Le grand registre : recherche, filtre catégorie, table des références.
 
 import { apiGet, apiSend } from '../api.js';
+import { icone } from '../icons.js';
 import { esc, eur, num, pc, confirmModal, openModal } from '../ui.js';
 import { S, go, refresh, lieuQuery, fmtStock } from '../app.js';
 import { openRefModal } from '../refmodal.js';
@@ -91,7 +92,7 @@ export async function render(el) {
       cell: (r) => `
         <div class="row row-actions" style="gap:5px; justify-self:end;">
           <span class="num created-at">${r.created_at.slice(0, 10)}</span>
-          <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer">ÉD</button>
+          <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer" title="Éditer">${icone('crayon', 15)}</button>
           <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button>
         </div>`,
     },
@@ -169,7 +170,7 @@ export async function render(el) {
     <button class="btn" data-import style="padding:11px 14px;">Importer un fichier</button>
     <button class="btn" data-export style="padding:11px 14px;">Exporter</button>
   </div>
-  <div class="panel" data-table></div>`;
+  <div class="panel" data-table data-section="registre"></div>`;
 
   const table = el.querySelector('[data-table]');
   renderTable(table, spec);

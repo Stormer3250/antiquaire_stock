@@ -12,12 +12,25 @@ const ANCIEN = 'antiquaire.vuVersion';  // clé de la toute première livraison
 const NOTES = [
   {
     date: '2026-08-12',
+    titre: 'Vocabulaire, barre latérale et confort',
+    lignes: [
+      'Le vocabulaire est fixé : une RECETTE se chiffre, une CARTE regroupe des recettes, une TARIFICATION est une grille de prix posée sur une carte.',
+      'Une recette peut désormais figurer sur plusieurs cartes. Dans une carte, le prix vient de sa tarification active ; ailleurs, c’est la première carte de la liste, et l’écran de la recette dit laquelle.',
+      'La barre latérale est repliée sur ses icônes et s’ouvre d’un clic, ce qui rend beaucoup de largeur aux tables.',
+      'La synthèse d’une sélection s’affiche en haut du tableau, plus en bas.',
+      'À l’inventaire, le niveau de la bouteille entamée se règle au curseur, en dixièmes.',
+      'Modifier une ligne ne renvoie plus la page en haut : la position de lecture est conservée.',
+      'La visite guidée éclaire vraiment la zone dont elle parle, et le sélecteur de lieu a disparu des écrans où il ne voulait rien dire.',
+    ],
+  },
+  {
+    date: '2026-08-12',
     titre: 'Menus, tarifications et réglage des prix',
     lignes: [
-      'Un menu regroupe des fiches ; une tarification est une grille de prix posée dessus. Mêmes recettes, prix différents, et celle marquée « appliquée » est celle que suivent le comptoir et les marges.',
+      'Une carte regroupe des recettes ; une tarification est une grille de prix posée dessus. Mêmes recettes, prix différents, et celle marquée « appliquée » est celle que suivent le comptoir et les marges.',
       'Dupliquer une tarification, en comparer deux côte à côte, et régler les prix sous contraintes : prix mini, prix maxi, marge moyenne visée, écart maximal. Le moteur propose, vous lisez, vous décidez, rien n’est enregistré avant.',
-      'Une fiche peut viser sa propre marge, ou voir son prix figé : le moteur ne la déplacera pas.',
-      'Le comptoir montre les fiches passées sous le plancher de marge, avec l’ingrédient qui pèse le plus dans leur coût.',
+      'Une recette peut viser sa propre marge, ou voir son prix figé : le moteur ne la déplacera pas.',
+      'Le comptoir montre les recettes passées sous le plancher de marge, avec l’ingrédient qui pèse le plus dans leur coût.',
       'Le barème est daté : un taux vaut à partir d’une date, l’ancien reste et couvre sa période.',
       'Cocher des lignes affiche une synthèse (valeur, marges, écarts) et permet de modifier les références retenues en une fois. Le tableau affiché s’exporte en .xlsx.',
     ],

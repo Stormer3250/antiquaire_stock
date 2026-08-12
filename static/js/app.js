@@ -17,6 +17,7 @@ import { installSelectUpgrader } from './select.js';
 import { installPalette } from './palette.js';
 import { installTour, autoTour } from './tour.js';
 import { installWhatsNew } from './whatsnew.js';
+import { icone } from './icons.js';
 
 export const S = {
   meta: null,          // /api/state : pricing, rates, lists, categories, locations
@@ -26,25 +27,41 @@ export const S = {
 };
 
 const NAV = [
-  { key: 'dash', label: 'Comptoir', num: '01' },
-  { key: 'refs', label: 'Références', num: '02' },
-  { key: 'inv', label: 'Inventaire', num: '03' },
-  { key: 'cocktails', label: 'Cartes & recettes', num: '04' },
-  { key: 'menus', label: 'Menus & tarifications', num: '05' },
-  { key: 'cave', label: 'Cave & seuils', num: '06' },
-  { key: 'bareme', label: 'Barème fiscal', num: '07' },
-  { key: 'config', label: 'Configuration', num: '08' },
+  { key: 'dash', label: 'Comptoir', ic: 'comptoir' },
+  { key: 'refs', label: 'Références', ic: 'references' },
+  { key: 'inv', label: 'Inventaire', ic: 'inventaire' },
+  { key: 'cocktails', label: 'Recettes', ic: 'recettes' },
+  { key: 'menus', label: 'Cartes & tarifications', ic: 'cartes' },
+  { key: 'cave', label: 'Cave & seuils', ic: 'cave' },
+  { key: 'bareme', label: 'Barème fiscal', ic: 'bareme' },
+  { key: 'config', label: 'Configuration', ic: 'config' },
 ];
+
+// Barre latérale : repliée par défaut pour rendre la largeur aux tables, dépliée au
+// survol, et épinglable pour qui préfère l'avoir en permanence.
+const EPINGLE = 'antiquaire.navEpinglee';
+const ICONE_EPINGLE = icone('chevrons', 15);
+
+function appliquerEpingle() {
+  const on = localStorage.getItem(EPINGLE) === '1';
+  document.body.classList.toggle('nav-epinglee', on);
+  const b = document.getElementById('btn-epingle');
+  if (b) {
+    b.classList.toggle('on', on);
+    b.title = on ? 'Replier la barre' : 'Déplier la barre';
+    b.setAttribute('aria-pressed', String(on));
+  }
+}
 
 const SCREENS = { dash, refs, product, inv, cocktails, menus, cave, bareme, config };
 
 const TITLES = {
-  dash: ['Bonsoir, le comptoir est ouvert', 'Valeur de la cave, commandes et marges de la carte'],
+  dash: ['Bonsoir, le comptoir est ouvert', 'Valeur de la cave, commandes et marges des cartes'],
   refs: ['Le grand registre', 'Références suivies et non suivies'],
   product: ['Fiche bouteille', 'Coût de revient, part fiscale et prix conseillé'],
-  inv: ['Inventaire', 'Comptage à la bouteille · vide, ¼, ½, ¾, pleine'],
-  cocktails: ['Cartes & recettes', 'Saisie des fiches, coût matière et marge'],
-  menus: ['Menus & tarifications', 'Regrouper les fiches, tenir plusieurs grilles de prix'],
+  inv: ['Inventaire', 'Comptage à la bouteille · niveau de l’entamée en dixièmes'],
+  cocktails: ['Recettes', 'Saisie des recettes, coût matière et marge'],
+  menus: ['Cartes & tarifications', 'Regrouper les recettes, tenir plusieurs grilles de prix'],
   cave: ['Cave & seuils', 'Maintien du stock, garnitures et import de fichier'],
   bareme: ['Barème fiscal', 'Droits d’accise et cotisation sécurité sociale'],
   config: ['Configuration', 'Politique de prix, catégories et référentiels'],
@@ -77,8 +94,9 @@ function renderShell() {
   const navKey = S.screen === 'product' ? 'refs' : S.screen;
   document.getElementById('nav').innerHTML = NAV.map(
     (n) => `
-    <button class="${n.key === navKey ? 'active' : ''}" data-nav="${n.key}">
-      <span class="num">${n.num}</span><span>${esc(n.label)}</span>
+    <button class="${n.key === navKey ? 'active' : ''}" data-nav="${n.key}"
+      title="${esc(n.label)}" aria-label="${esc(n.label)}">
+      ${icone(n.ic)}<span class="lib">${esc(n.label)}</span>
     </button>`
   ).join('');
   document.querySelectorAll('#nav [data-nav]').forEach((b) =>
@@ -93,7 +111,12 @@ function renderShell() {
   document.getElementById('marge-note').textContent =
     `Cible ${pc(pr.cible)} · plancher ${pc(pr.min)}`;
 
+  // Un lieu de stock n'a aucun sens sur les recettes, les cartes, le barème ou les
+  // réglages : on ne montre le sélecteur que là où il change quelque chose.
+  const AVEC_LIEU = new Set(['dash', 'refs', 'inv', 'cave', 'product']);
   const seg = document.getElementById('lieu-seg');
+  seg.hidden = !AVEC_LIEU.has(S.screen);
+  if (seg.hidden) { seg.innerHTML = ''; return; }
   const items = [{ id: 'tous', nom: 'Tous' }, ...S.meta.locations.map((l) => ({ id: l.id, nom: l.nom }))];
   seg.innerHTML = items.map(
     (it) => `<button class="${String(S.lieu) === String(it.id) ? 'active' : ''}"
@@ -107,8 +130,45 @@ function renderShell() {
   );
 }
 
+// ---------- garder la position de lecture ----------
+//
+// Un écran se re-génère en vidant son conteneur : la hauteur du document retombe, le
+// navigateur ramène le défilement à zéro, et le contenu revient trop tard. Résultat,
+// modifier une ligne au milieu d'une longue table renvoyait tout en haut. On garde donc
+// une ancre, et on la repose après re-rendu. Une VRAIE navigation, elle, doit bien
+// repartir du haut : d'où le drapeau.
+let ancre = 0;
+let ancreLe = 0;
+let navigation = false;
+
+window.addEventListener('scroll', () => {
+  if (navigation) return;
+  // Un retour à zéro n'efface PAS l'ancre : c'est presque toujours le navigateur qui
+  // rogne le défilement parce que le document vient de rapetisser, pas l'utilisateur
+  // qui remonte. Le premier piège de cette correction était là.
+  if (window.scrollY > 0) {
+    ancre = window.scrollY;
+    ancreLe = performance.now();
+  }
+}, { passive: true });
+
+function installerAncre() {
+  new MutationObserver(() => {
+    if (navigation || ancre <= 0 || window.scrollY > 0) return;
+    if (performance.now() - ancreLe > 1500) return;   // trop vieux : c'était voulu
+    if (document.body.scrollHeight >= ancre + window.innerHeight) window.scrollTo(0, ancre);
+  }).observe(document.getElementById('screen'), { childList: true, subtree: true });
+}
+
 async function route() {
   const parts = (location.hash || '#/dash').slice(2).split('/');
+  const change = parts[0] !== S.screen || (parts[1] ? Number(parts[1]) : null) !== S.param;
+  if (change) {
+    navigation = true;
+    ancre = 0;
+    window.scrollTo(0, 0);
+    setTimeout(() => { navigation = false; }, 120);
+  }
   S.screen = SCREENS[parts[0]] ? parts[0] : 'dash';
   S.param = parts[1] ? Number(parts[1]) : null;
   renderShell();
@@ -120,6 +180,13 @@ async function route() {
 
 async function boot() {
   await reloadMeta();
+  installerAncre();
+  appliquerEpingle();
+  document.getElementById('btn-epingle').innerHTML = ICONE_EPINGLE;
+  document.getElementById('btn-epingle').addEventListener('click', () => {
+    localStorage.setItem(EPINGLE, localStorage.getItem(EPINGLE) === '1' ? '0' : '1');
+    appliquerEpingle();
+  });
   installSelectUpgrader();
   installPalette();
   installTour(() => S.screen);

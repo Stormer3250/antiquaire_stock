@@ -21,7 +21,7 @@ const PRICING_FIELDS = [
 
 const LISTS = [
   { key: 'fournisseurs', title: 'Fournisseurs', note: 'Proposés à la création d’une référence et à l’import.' },
-  { key: 'familles', title: 'Familles de carte', note: 'Classement des fiches cocktails.' },
+  { key: 'familles', title: 'Familles de recettes', note: 'Classement des recettes sur une carte.' },
   { key: 'verres', title: 'Verrerie', note: 'Proposée sur chaque fiche cocktail.' },
   { key: 'unites', title: 'Unités des non suivies', note: 'Branche, trait, zeste, pincée… pour les garnitures.' },
 ];
@@ -34,7 +34,7 @@ export async function render(el) {
 
   el.innerHTML = `
   <div class="stack" style="gap:18px;">
-    <div class="panel">
+    <div class="panel" data-section="politique">
       <div class="panel-head"><div class="serif-title">Politique de prix</div></div>
       <div style="display:grid; grid-template-columns:repeat(3,1fr);">
         ${PRICING_FIELDS.map((f) => `
@@ -50,7 +50,7 @@ export async function render(el) {
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel" data-section="categories">
       <div class="panel-head">
         <div class="serif-title">Catégories de produits</div>
         <button class="btn" data-cat-add>+ Catégorie</button>

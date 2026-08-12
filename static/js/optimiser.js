@@ -30,7 +30,7 @@ export function openOptimiser({ tarif, onApplied }) {
       </div>`).join('')}
     </div>
     <div class="modal-foot">
-      <div class="modal-hint">Laissez vide ce que vous ne voulez pas contraindre. Les fiches
+      <div class="modal-hint">Laissez vide ce que vous ne voulez pas contraindre. Les recettes
         au prix figé ne bougeront pas.</div>
       <div class="row">
         <button class="btn muted" data-cancel>Annuler</button>
@@ -52,7 +52,7 @@ export function openOptimiser({ tarif, onApplied }) {
     <div class="modal-body" style="display:flex; flex-direction:column; gap:14px;">
       <div class="${r.violations.length ? 'card-warn' : 'card-ok'}" style="padding:16px 18px;">
         <div style="font-size:14px; line-height:1.6;">
-          <b>${s.n} fiche${s.n > 1 ? 's' : ''}, ${s.changees} prix change${s.changees > 1 ? 'nt' : ''}.</b><br>
+          <b>${s.n} recette${s.n > 1 ? 's' : ''}, ${s.changees} prix change${s.changees > 1 ? 'nt' : ''}.</b><br>
           Marge moyenne ${pc(s.marge_avant, 1)} → <b>${pc(s.marge_apres, 1)}</b> ·
           écart ${eur(s.ecart_avant)} → <b>${eur(s.ecart_apres)}</b> ·
           ${s.sous_plancher
@@ -66,7 +66,7 @@ export function openOptimiser({ tarif, onApplied }) {
       </div>
       <div style="max-height:44vh; overflow:auto;">
         <div class="cmp-row cmp-head">
-          <div class="mono-label">Fiche</div>
+          <div class="mono-label">Recette</div>
           <div class="mono-label r">Aujourd’hui</div>
           <div class="mono-label r">Proposé</div>
           <div class="mono-label r">Écart</div>

@@ -29,10 +29,10 @@ export async function render(el) {
       note: `sur ${refs.length} référence${refs.length > 1 ? 's' : ''} suivie${refs.length > 1 ? 's' : ''}`,
     },
     cocktails.length
-      ? { label: 'Marge moyenne carte', value: pc(avgMarge, 1), note: `cible ${pc(pr.cible)}, plancher ${pc(pr.min)}` }
-      : { label: 'Marge moyenne carte', value: '—', note: 'aucune fiche cocktail pour l’instant' },
+      ? { label: 'Marge moyenne des cartes', value: pc(avgMarge, 1), note: `cible ${pc(pr.cible)}, plancher ${pc(pr.min)}` }
+      : { label: 'Marge moyenne des cartes', value: '—', note: 'aucune recette pour l’instant' },
     { label: 'Seuils franchis', value: String(lowCount), note: 'références sous leur seuil d’alerte' },
-    { label: 'Fiches à la carte', value: String(cocktails.length), note: 'recettes chiffrées et à jour' },
+    { label: 'Recettes chiffrées', value: String(cocktails.length), note: 'à jour du dernier coût matière' },
   ];
 
   const groups = ordersData.groups;
@@ -53,18 +53,18 @@ export async function render(el) {
           <div class="num accent" style="font-size:12.5px;">commander ${num(l.quantite, 0)}</div>
         </div>`).join('')}`).join('');
 
-  // Ce que les hausses de prix d'achat ont fait aux fiches : rien de nouveau en base,
+  // Ce que les hausses de prix d'achat ont fait aux recettes : rien de nouveau en base,
   // on recalcule au prix pratiqué aujourd'hui et on ne montre que ce qui a lâché.
   const impact = impactData.fiches;
   const impactPanel = impact.length === 0
-    ? `<div class="empty-note">Aucune fiche sous le plancher de ${pc(impactData.plancher)} :
+    ? `<div class="empty-note">Aucune recette sous le plancher de ${pc(impactData.plancher)} :
         les hausses de prix d’achat n’ont encore rien fait céder.</div>`
     : impact.slice(0, 8).map((f) => `
       <div class="trow" style="grid-template-columns:5px 1fr auto; padding:11px 20px;">
         <div class="status-bar low" style="height:34px;"></div>
         <div class="cell-main">
           <div class="nom">${esc(f.nom)}</div>
-          <div class="sub">${esc(f.menu_nom || 'hors menu')}${f.ingredient_lourd
+          <div class="sub">${esc(f.menu_nom || 'sur aucune carte')}${f.ingredient_lourd
             ? ` · ${esc(f.ingredient_lourd)} pèse ${pc(f.part_ingredient)} du coût` : ''}</div>
         </div>
         <div style="text-align:right;">
@@ -75,7 +75,7 @@ export async function render(el) {
       </div>`).join('');
 
   const marginsPanel = cocktails.length === 0
-    ? `<div class="empty-note">Les fiches de <a href="#/cocktails">Cartes &amp; recettes</a> apparaîtront ici avec leur marge.</div>`
+    ? `<div class="empty-note">Les recettes apparaîtront ici avec leur marge.</div>`
     : cocktails.map((c) => `
       <div style="padding:12px 20px; border-bottom:1px solid var(--line2); display:flex; flex-direction:column; gap:7px;">
         <div class="row spread" style="align-items:baseline;">
@@ -88,13 +88,13 @@ export async function render(el) {
 
   el.innerHTML = `
   <div style="display:grid; grid-template-columns:1.15fr 1fr; gap:16px; align-items:stretch;">
-    <div class="hero">
+    <div class="hero" data-section="valeur">
       <div class="mono-label">Valeur de la cave · prix d’achat HT · ${esc(lieuLabel())}</div>
       <div class="hero-value">${eur(totalValue, 0)}</div>
       <div class="hero-note">${enStock} référence${enStock > 1 ? 's' : ''} en stock,
         sur ${refs.length} suivie${refs.length > 1 ? 's' : ''}.</div>
     </div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;" data-section="reperes">
       ${kpis.map((k) => `
       <div class="kpi">
         <div class="mono-label">${esc(k.label)}</div>
@@ -105,27 +105,27 @@ export async function render(el) {
   </div>
 
   <div style="display:grid; grid-template-columns:1.35fr 1fr; gap:16px; margin-top:16px;">
-    <div class="panel">
+    <div class="panel" data-section="commandes">
       <div class="panel-head">
         <div class="serif-title">La cave crie famine</div>
         <button class="btn" data-goto-cave>Régler les seuils</button>
       </div>
       ${orderPanel}
     </div>
-    <div class="panel" style="display:flex; flex-direction:column;">
+    <div class="panel" style="display:flex; flex-direction:column;" data-section="marges">
       <div class="panel-head">
-        <div class="serif-title">Marge par fiche</div>
+        <div class="serif-title">Marge par recette</div>
         <div class="num" style="font-size:10.5px; color:var(--mut3);">plancher ${pc(pr.min)}</div>
       </div>
       ${marginsPanel}
     </div>
   </div>
 
-  <div class="panel" style="margin-top:16px;">
+  <div class="panel" style="margin-top:16px;" data-section="impact">
     <div class="panel-head">
       <div class="serif-title">Ce que les hausses d’achat ont fait céder</div>
       <div class="num" style="font-size:10.5px; color:var(--mut3);">
-        ${impact.length} fiche${impact.length > 1 ? 's' : ''} sous le plancher de ${pc(impactData.plancher)}</div>
+        ${impact.length} recette${impact.length > 1 ? 's' : ''} sous le plancher de ${pc(impactData.plancher)}</div>
     </div>
     ${impactPanel}
   </div>`;
