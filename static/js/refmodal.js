@@ -191,6 +191,7 @@ export function openRefModal({ suivi = true, onSaved = null, onClose = null } = 
     };
     if (!body.nom) {
       await alertModal({ title: 'Nom manquant', body: 'Une référence doit porter un nom.' });
+      rerender();
       return;
     }
     if (state.suivi) {
@@ -226,6 +227,7 @@ export function openRefModal({ suivi = true, onSaved = null, onClose = null } = 
       else await refresh();
     } catch (e) {
       await alertModal({ title: 'Enregistrement impossible', body: e.message });
+      rerender();
     }
   }
 
