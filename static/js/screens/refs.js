@@ -181,7 +181,7 @@ export async function render(el) {
       if (key === 'export') {
         // ce qui part dans le fichier est ce qui est à l'écran : tri, filtre et sélection
         const etat = tableState(TABLE);
-        const visibles = etat.selected.size
+        const visibles = st.view === 'table' && etat.selected.size
           ? filtered.filter((r) => etat.selected.has(r.id))
           : filtered;
         exporter({

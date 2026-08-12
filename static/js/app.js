@@ -188,7 +188,7 @@ async function route() {
       body: 'Les modifications en cours sur cet écran seront perdues.',
       label: 'Quitter',
     });
-    if (!partir) { location.hash = params.hash(); return; }
+    if (!partir) { location.hash = params.hash(); ficheEnAttente = null; return; }
     params.clearDraft();
   }
 

@@ -15,7 +15,6 @@ const TRAITS = {
   cartes: '<path d="M3 5h6a3 3 0 0 1 3 3v11a2.5 2.5 0 0 0-2.5-2H3V5Z"/><path d="M21 5h-6a3 3 0 0 0-3 3v11a2.5 2.5 0 0 1 2.5-2H21V5Z"/>',
   // cave : des caisses
   cave: '<path d="M3 8h8v6H3zM13 8h8v6h-8zM8 15h8v6H8z"/>',
-  // barème : une balance
   // configuration : des curseurs
   config: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
   // crayon : éditer
