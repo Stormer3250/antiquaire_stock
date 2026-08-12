@@ -17,8 +17,7 @@ const ECRANS = [
   ['cocktails', 'Recettes'],
   ['menus', 'Cartes & tarifications'],
   ['cave', 'Cave & seuils'],
-  ['bareme', 'Barème fiscal'],
-  ['config', 'Configuration'],
+  ['params', 'Paramètres'],
 ];
 
 let open = false;

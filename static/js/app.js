@@ -1,15 +1,14 @@
 // L'Antiquaire — coquille : routage, barre latérale, en-tête, état partagé.
 
 import { apiGet } from './api.js';
-import { esc, pc, num, setPctDecimales } from './ui.js';
+import { esc, pc, num, setPctDecimales, confirmModal } from './ui.js';
 import * as dash from './screens/dash.js';
 import * as refs from './screens/refs.js';
 import * as inv from './screens/inventory.js';
 import * as cocktails from './screens/cocktails.js';
 import * as menus from './screens/menus.js';
 import * as cave from './screens/cave.js';
-import * as bareme from './screens/bareme.js';
-import * as config from './screens/config.js';
+import * as params from './screens/params.js';
 import { openReception } from './reception.js';
 import { openRefModal } from './refmodal.js';
 import { openFiche } from './fiche.js';
@@ -33,8 +32,7 @@ const NAV = [
   { key: 'cocktails', label: 'Recettes', ic: 'recettes' },
   { key: 'menus', label: 'Cartes & tarifications', ic: 'cartes' },
   { key: 'cave', label: 'Cave & seuils', ic: 'cave' },
-  { key: 'bareme', label: 'Barème fiscal', ic: 'bareme' },
-  { key: 'config', label: 'Configuration', ic: 'config' },
+  { key: 'params', label: 'Paramètres', ic: 'config' },
 ];
 
 // Barre latérale : repliée par défaut pour rendre la largeur aux tables, dépliée au
@@ -53,7 +51,7 @@ function appliquerEpingle() {
   }
 }
 
-const SCREENS = { dash, refs, inv, cocktails, menus, cave, bareme, config };
+const SCREENS = { dash, refs, inv, cocktails, menus, cave, params };
 
 const TITLES = {
   dash: ['Bonsoir, le comptoir est ouvert', 'Valeur de la cave, commandes et marges des cartes'],
@@ -62,8 +60,8 @@ const TITLES = {
   cocktails: ['Recettes', 'Saisie des recettes, coût matière et marge'],
   menus: ['Cartes & tarifications', 'Regrouper les recettes, tenir plusieurs grilles de prix'],
   cave: ['Cave & seuils', 'Maintien du stock, garnitures et import de fichier'],
-  bareme: ['Barème fiscal', 'Droits d’accise et cotisation sécurité sociale'],
-  config: ['Configuration', 'Politique de prix, catégories et référentiels'],
+  params: ['Paramètres',
+    'Politique de prix, catégories, barème fiscal, référentiels et sauvegardes'],
 };
 
 export async function reloadMeta() {
@@ -176,7 +174,27 @@ async function route() {
     location.hash = '#/refs';   // le changement de hash relance route()
     return;
   }
-  const change = parts[0] !== S.screen || (parts[1] ? Number(parts[1]) : null) !== S.param;
+  // Les anciennes adresses restent valides : le barème et la configuration sont
+  // devenus deux panneaux de l'écran Paramètres.
+  if (parts[0] === 'bareme') { location.hash = '#/params/bareme'; return; }
+  if (parts[0] === 'config') { location.hash = '#/params'; return; }
+
+  // Quitter les Paramètres avec un brouillon en cours demande confirmation. Reposer le
+  // hash relance route(), mais on est alors de retour sur 'params' : la question ne se
+  // pose pas deux fois, aucun drapeau n'est nécessaire.
+  if (S.screen === 'params' && parts[0] !== 'params' && params.hasDraft()) {
+    const partir = await confirmModal({
+      title: 'Quitter sans enregistrer ?',
+      body: 'Les modifications en cours sur cet écran seront perdues.',
+      label: 'Quitter',
+    });
+    if (!partir) { location.hash = params.hash(); return; }
+    params.clearDraft();
+  }
+
+  // un segment de sous-panneau ('#/params/bareme') n'est pas un identifiant
+  const param = /^\d+$/.test(parts[1] || '') ? Number(parts[1]) : null;
+  const change = parts[0] !== S.screen || param !== S.param;
   if (change) {
     navigation = true;
     ancre = 0;
@@ -184,7 +202,7 @@ async function route() {
     setTimeout(() => { navigation = false; }, 120);
   }
   S.screen = SCREENS[parts[0]] ? parts[0] : 'dash';
-  S.param = parts[1] ? Number(parts[1]) : null;
+  S.param = param;
   renderShell();
   const el = document.getElementById('screen');
   el.innerHTML = '';

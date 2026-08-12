@@ -624,3 +624,20 @@ select.input option { background: var(--input); color: var(--ink); }
   border: 1px solid var(--line); color: var(--mut2);
 }
 .chip-carte.premiere { border-color: var(--ac); color: var(--ac); }
+
+/* ---------- Paramètres : sous-navigation et barre de brouillon ---------- */
+.params-nav { padding: 6px 0; position: sticky; top: 0; }
+.params-nav button {
+  display: block; width: 100%; text-align: left; padding: 10px 14px;
+  background: transparent; border: none; border-left: 2px solid transparent;
+  color: var(--mut); font-family: var(--sans); font-size: 13px; cursor: pointer;
+}
+.params-nav button:hover { color: var(--ink); }
+.params-nav button.active {
+  color: var(--ink); border-left-color: var(--ac); background: var(--panel2);
+}
+.draft-bar {
+  position: sticky; top: 0; z-index: 6; display: flex; align-items: center;
+  justify-content: space-between; gap: 12px; padding: 11px 16px; margin-bottom: 14px;
+  background: var(--panel2); border: 1px solid var(--ac); font-size: 13px;
+}

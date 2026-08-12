@@ -59,19 +59,13 @@ const STEPS = {
     ['[data-vb-act="import"]', 'Import de fichier',
       'Un .xlsx ou .csv, déposé ou choisi. Les colonnes se mappent à l’écran, et un fichier à deux colonnes « nom, prix d’achat » suffit à mettre à jour les tarifs. L’historique des imports vit dans la même fenêtre.'],
   ],
-  bareme: [
-    ['[data-section="taux"]', 'Les taux',
-      'Le droit d’accise des spiritueux s’applique à l’hectolitre d’alcool pur : dose × degré. Le rhum traditionnel des DOM a son propre taux réduit, à cocher sur la fiche de la bouteille. Le vin et la bière se taxent au volume de produit fini.'],
-    ['[data-nouveau-taux]', 'Un taux vaut à partir d’une date',
-      'Les droits changent chaque année. Un nouveau taux ne remplace pas l’ancien : il prend effet à sa date, l’ancien couvre la période qu’il a couverte, et re-chiffrer une carte de l’an dernier donne ce qu’elle coûtait l’an dernier.'],
-    ['[data-section="effet-dose"]', 'Effet sur la dose',
-      'Ce que chaque bouteille paie réellement pour une dose, et la part que cela représente dans son coût matière. Une référence marquée « ne contient pas d’alcool » n’apparaît ici qu’à zéro.'],
-  ],
-  config: [
+  params: [
+    ['.params-nav', 'Cinq panneaux, un seul écran',
+      'Politique de prix, catégories, barème fiscal, référentiels et sauvegardes vivent ici. Les quatre premiers panneaux ne s’enregistrent pas tout seuls : une barre apparaît en haut dès qu’il y a des modifications, avec « Enregistrer » et « Abandonner ». Changer de panneau ne perd rien.'],
     ['[data-section="politique"]', 'Politique de prix',
       'La marge cible sert au calcul des prix conseillés, le plancher déclenche les alertes rouges, l’arrondi fixe le pas des prix affichés.'],
-    ['[data-section="categories"]', 'Catégories',
-      'Chaque catégorie porte sa dose par défaut, son régime fiscal, sa marge et sa TVA. Une référence peut s’en écarter au cas par cas depuis sa fiche.'],
+    ['[data-section="affichage"]', 'Affichage',
+      'Le nombre de décimales des pourcentages, valable partout : zéro se lit d’un coup d’œil, une ou deux servent quand les marges se jouent au dixième de point.'],
   ],
 };
 
