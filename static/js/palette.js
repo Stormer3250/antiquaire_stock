@@ -1,4 +1,4 @@
-// Palette ⌘K : chercher une référence, une fiche, un écran, ou lancer une action.
+// Palette ⌘K : chercher une référence, une recette, une carte, un écran, ou agir.
 // Les données sont chargées à l'ouverture, pas à chaque frappe.
 
 import { apiGet, apiSend } from './api.js';
@@ -13,8 +13,8 @@ const ECRANS = [
   ['dash', 'Comptoir'],
   ['refs', 'Références'],
   ['inv', 'Inventaire'],
-  ['cocktails', 'Cartes & recettes'],
-  ['menus', 'Menus & tarifications'],
+  ['cocktails', 'Recettes'],
+  ['menus', 'Cartes & tarifications'],
   ['cave', 'Cave & seuils'],
   ['bareme', 'Barème fiscal'],
   ['config', 'Configuration'],
@@ -34,7 +34,7 @@ async function collect() {
     { kind: 'Action', label: 'Réception', hint: 'entrée de stock', run: () => openReception() },
     {
       kind: 'Action',
-      label: 'Nouvelle fiche cocktail',
+      label: 'Nouvelle recette',
       hint: '',
       run: async () => {
         await apiSend('POST', '/api/cocktails', {});
@@ -56,9 +56,9 @@ async function collect() {
   ]);
   menus.menus.forEach((m) => {
     items.push({
-      kind: 'Menu',
+      kind: 'Carte',
       label: m.nom,
-      hint: `${m.kpis.n || 0} fiches`,
+      hint: `${m.kpis.n || 0} recettes`,
       run: () => go('#/menus'),
     });
     m.tarifs.forEach((t) =>
@@ -80,7 +80,7 @@ async function collect() {
   );
   cocktails.cocktails.forEach((c) =>
     items.push({
-      kind: 'Fiche',
+      kind: 'Recette',
       label: c.nom,
       hint: c.famille,
       run: () => go('#/cocktails'),
@@ -101,7 +101,7 @@ export async function openPalette() {
   root.innerHTML = `
     <div class="scrim palette-scrim">
       <div class="palette">
-        <input class="palette-input" placeholder="Chercher une bouteille, une fiche, un écran…"
+        <input class="palette-input" placeholder="Chercher une bouteille, une recette, une carte, un écran…"
           aria-label="Recherche" autocomplete="off">
         <div class="palette-list"></div>
         <div class="palette-foot">

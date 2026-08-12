@@ -3,6 +3,7 @@
 // Reprise du GuidedTour de l'éditeur e-facture, en JS sans framework.
 
 import { auto, claim, release } from './overlay.js';
+import { allumer, eteindre, amener } from './spotlight.js';
 
 const SEEN = (ecran) => `antiquaire.tour.${ecran}`;
 const AUTO_OFF = 'antiquaire.tour.silence';   // l'utilisateur a demandé qu'on le laisse
@@ -11,31 +12,31 @@ const AUTO_OFF = 'antiquaire.tour.silence';   // l'utilisateur a demandé qu'on 
 // simplement sautée : un écran vide ne casse pas la visite.
 const STEPS = {
   dash: [
-    ['.hero', 'La valeur de la cave',
+    ['[data-section="valeur"]', 'La valeur de la cave',
       'Le total du stock au prix d’achat HT, pour le lieu choisi en haut à droite. Basculez entre Réserve et Comptoir pour voir la valeur de chacun.'],
     ['.kpi', 'Les quatre repères',
-      'Combien de références ont du stock, la marge moyenne de la carte, combien de bouteilles sont passées sous leur seuil, et combien de fiches sont chiffrées.'],
-    ['.panel:last-child', 'Ce que les hausses d’achat ont fait céder',
-      'Les fiches passées sous le plancher de marge au prix pratiqué aujourd’hui, la plus basse en premier, avec l’ingrédient qui pèse le plus dans leur coût. Rien de nouveau en base : on recalcule et on trie.'],
-    ['[data-goto-cave]', 'La cave crie famine',
+      'Combien de références ont du stock, la marge moyenne de la carte, combien de bouteilles sont passées sous leur seuil, et combien de recettes sont chiffrées.'],
+    ['[data-section="impact"]', 'Ce que les hausses d’achat ont fait céder',
+      'Les recettes passées sous le plancher de marge au prix pratiqué aujourd’hui, la plus basse en premier, avec l’ingrédient qui pèse le plus dans leur coût. Rien de nouveau en base : on recalcule et on trie.'],
+    ['[data-section="commandes"]', 'La cave crie famine',
       'Tout ce qui est tombé sous son seuil d’alerte, groupé par fournisseur, avec la quantité à commander pour revenir au stock cible. Le bouton mène au réglage des seuils.'],
   ],
   refs: [
     ['[data-q]', 'Chercher',
       'Le nom, la marque ou le fournisseur. Les accents et les majuscules n’ont pas d’importance.'],
-    ['.thead', 'Trier',
+    ['[data-section="registre"] .thead', 'Trier',
       'Chaque colonne est cliquable : un clic trie, un second inverse le sens. La dernière colonne trie par date de création.'],
-    ['.trow', 'Une ligne, une bouteille',
-      'Le trait de couleur à gauche dit l’état du stock. Cliquez la ligne pour ouvrir sa fiche, « ÉD » pour corriger ses informations sans quitter l’écran.'],
+    ['[data-section="registre"] .trow', 'Une ligne, une bouteille',
+      'Le trait de couleur à gauche dit l’état du stock. Cliquez la ligne pour ouvrir sa fiche, le crayon pour corriger ses informations sans quitter l’écran.'],
   ],
   product: [
     ['[data-price]', 'Le prix conseillé',
       'Calculé à partir du coût de la dose et de la marge visée, puis arrondi au pas défini dans Configuration. Saisir un prix à la main le fige : un bouton apparaît pour revenir au calcul.'],
-    ['.waterfall, .panel', 'Comment on arrive là',
+    ['[data-section="calcul"]', 'Comment on arrive là',
       'Prix d’achat divisé par le nombre de doses, plus les droits d’accise et la cotisation sécurité sociale si le prix d’achat ne les contient pas déjà. Cela donne le coût d’une dose. Le prix de vente HT vaut ce coût divisé par (1 moins la marge), puis la TVA s’ajoute.'],
   ],
   inv: [
-    ['.thead', 'Compter',
+    ['[data-section="comptage"] .thead', 'Compter',
       'Une ligne par référence. Le niveau de la bouteille entamée d’un côté, le nombre de bouteilles pleines de l’autre.'],
     ['[data-summary]', 'Clôturer',
       'Seules les lignes touchées sont enregistrées : vous pouvez ne compter qu’une partie de la cave et revenir plus tard.'],
@@ -49,35 +50,37 @@ const STEPS = {
       'Le prix qui tient la marge cible de la maison compte tenu du coût matière. Le curseur au-dessus permet de s’en écarter, la carte passe en rouge sous le plancher de marge.'],
   ],
   menus: [
-    ['[data-menu-nom]', 'Un menu, des fiches',
-      'Un menu regroupe des fiches. Une fiche n’appartient qu’à un seul menu : c’est ce qui permet de dire sans ambiguïté quel prix s’applique à elle.'],
+    ['[data-menu-nom]', 'Une carte, des recettes',
+      'Une carte regroupe des recettes, et une recette peut figurer sur plusieurs cartes. Dans une carte, le prix vient de sa tarification active ; ailleurs, c’est la première carte de la liste qui donne le prix, et l’écran le dit toujours.'],
     ['[data-fiches] .thead', 'Les prix affichés',
       'Ce sont ceux de la tarification consultée à droite, même si elle n’est pas encore appliquée. La marge suit, ce qui permet d’essayer une grille avant de s’y engager.'],
     ['[data-new-tarif]', 'Tarifications',
       'Mêmes recettes, prix différents : une pour l’été, une pour l’happy hour, une en brouillon. « APPL » désigne celle qu’on pratique vraiment, et c’est elle que reprennent le comptoir et les marges.'],
     ['[data-regler]', 'Régler les prix sous contraintes',
-      'Prix mini, prix maxi, marge moyenne visée, écart maximal entre la moins chère et la plus chère : le moteur propose un prix par fiche, respecte les prix figés, et dit ce qu’il n’a pas pu tenir. Rien n’est enregistré tant que vous n’avez pas appliqué.'],
+      'Prix mini, prix maxi, marge moyenne visée, écart maximal entre la moins chère et la plus chère : le moteur propose un prix par recette, respecte les prix figés, et dit ce qu’il n’a pas pu tenir. Rien n’est enregistré tant que vous n’avez pas appliqué.'],
     ['[data-comparer]', 'Comparer',
-      'Deux tarifications côte à côte, prix et marge par fiche, écart mis en évidence, plus la moyenne de chacune.'],
+      'Deux tarifications côte à côte, prix et marge par recette, écart mis en évidence, plus la moyenne de chacune.'],
   ],
   cave: [
-    ['.thead', 'Seuil et cible',
+    ['[data-section="seuils"] .thead', 'Seuil et cible',
       'Le seuil déclenche l’alerte, la cible est le stock à reconstituer : la commande suggérée vaut cible moins stock.'],
-    ['[data-import]', 'Import de fichier',
+    ['[data-section="garnitures"]', 'Les garnitures',
+      'Ni stock, ni seuil, ni inventaire : zestes, sirops et aromates servent uniquement à chiffrer les recettes, au coût unitaire que vous leur donnez.'],
+    ['[data-section="import"]', 'Import de fichier',
       'Un .xlsx ou .csv, déposé ou choisi. Les colonnes se mappent à l’écran, et un fichier à deux colonnes « nom, prix d’achat » suffit à mettre à jour les tarifs.'],
   ],
   bareme: [
-    ['.panel', 'Les taux',
+    ['[data-section="taux"]', 'Les taux',
       'Le droit d’accise des spiritueux s’applique à l’hectolitre d’alcool pur : dose × degré. Le rhum traditionnel des DOM a son propre taux réduit, à cocher sur la fiche de la bouteille. Le vin et la bière se taxent au volume de produit fini.'],
     ['[data-nouveau-taux]', 'Un taux vaut à partir d’une date',
       'Les droits changent chaque année. Un nouveau taux ne remplace pas l’ancien : il prend effet à sa date, l’ancien couvre la période qu’il a couverte, et re-chiffrer une carte de l’an dernier donne ce qu’elle coûtait l’an dernier.'],
-    ['.panel:nth-of-type(2)', 'Effet sur la dose',
+    ['[data-section="effet-dose"]', 'Effet sur la dose',
       'Ce que chaque bouteille paie réellement pour une dose, et la part que cela représente dans son coût matière. Une référence marquée « ne contient pas d’alcool » n’apparaît ici qu’à zéro.'],
   ],
   config: [
-    ['.panel', 'Politique de prix',
+    ['[data-section="politique"]', 'Politique de prix',
       'La marge cible sert au calcul des prix conseillés, le plancher déclenche les alertes rouges, l’arrondi fixe le pas des prix affichés.'],
-    ['.panel:nth-of-type(2)', 'Catégories',
+    ['[data-section="categories"]', 'Catégories',
       'Chaque catégorie porte sa dose par défaut, son régime fiscal, sa marge et sa TVA. Une référence peut s’en écarter au cas par cas depuis sa fiche.'],
   ],
 };
@@ -89,12 +92,10 @@ export function startTour(ecran) {
   if (!steps.length || active) return;
   claim('tour');
 
-  const overlay = document.createElement('div');
-  overlay.className = 'tour-overlay';
   const bubble = document.createElement('div');
   bubble.className = 'tour-bubble';
-  document.body.append(overlay, bubble);
-  active = { overlay, bubble };
+  document.body.append(bubble);
+  active = { bubble };
   let i = 0;
 
   function stop(silence = false) {
@@ -102,9 +103,10 @@ export function startTour(ecran) {
     // « Passer » vaut pour toute l'application : quelqu'un qui refuse une visite
     // ne veut pas qu'on la lui propose sur les six écrans suivants.
     if (silence) localStorage.setItem(AUTO_OFF, '1');
-    overlay.remove();
+    eteindre();
     bubble.remove();
-    window.removeEventListener('resize', paint);
+    window.removeEventListener('resize', placer);
+    window.removeEventListener('scroll', placer, true);
     document.removeEventListener('keydown', keys, true);
     active = null;
     release('tour');
@@ -123,19 +125,39 @@ export function startTour(ecran) {
     paint();
   }
 
-  function paint() {
+  // La bulle se place à côté de la zone éclairée, et se replace si la page bouge.
+  // « La zone » peut être plusieurs blocs (les quatre repères) : on prend leur emprise
+  // commune, sinon la bulle vient se poser sur ceux qu'elle est censée montrer.
+  let zone = null;
+  function emprise() {
+    const l = [...document.querySelectorAll('.cc-lit')].map((n) => n.getBoundingClientRect());
+    if (!l.length) return zone.getBoundingClientRect();
+    return {
+      top: Math.min(...l.map((r) => r.top)),
+      left: Math.min(...l.map((r) => r.left)),
+      right: Math.max(...l.map((r) => r.right)),
+      bottom: Math.max(...l.map((r) => r.bottom)),
+    };
+  }
+  function placer() {
+    if (!zone) return;
+    const r = emprise();
+    const dessous = r.bottom + 210 < window.innerHeight;
+    bubble.style.top = dessous
+      ? `${r.bottom + 14}px`
+      : `${Math.max(12, Math.min(r.top - 210, window.innerHeight - 230))}px`;
+    bubble.style.left = `${Math.min(Math.max(12, r.left), window.innerWidth - 400)}px`;
+  }
+
+  async function paint() {
     const [sel, title, text] = steps[i];
-    const target = document.querySelector(sel);
-    if (!target) { move(1); return; }
-    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    const r = target.getBoundingClientRect();
-    const pad = 6;
-    Object.assign(overlay.style, {
-      top: `${r.top - pad}px`,
-      left: `${r.left - pad}px`,
-      width: `${r.width + pad * 2}px`,
-      height: `${r.height + pad * 2}px`,
-    });
+    const cibles = document.querySelectorAll(sel);
+    if (!cibles.length) { move(1); return; }
+    zone = cibles[0];
+    // d'abord amener la zone à l'écran, ATTENDRE que le défilement soit fini,
+    // et seulement ensuite éclairer et poser la bulle
+    await amener(zone);
+    allumer(sel);
     bubble.innerHTML = `
       <div class="tour-step">Étape ${i + 1} sur ${steps.length}</div>
       <div class="serif-title tour-title"></div>
@@ -149,17 +171,14 @@ export function startTour(ecran) {
       </div>`;
     bubble.querySelector('.tour-title').textContent = title;
     bubble.querySelector('.tour-text').textContent = text;
-    // sous la cible si la place le permet, au-dessus sinon
-    const below = r.bottom + 190 < window.innerHeight;
-    bubble.style.top = below ? `${r.bottom + 14}px` : `${Math.max(12, r.top - 200)}px`;
-    bubble.style.left = `${Math.min(Math.max(12, r.left), window.innerWidth - 400)}px`;
+    placer();
     bubble.querySelector('[data-skip]').addEventListener('click', () => stop(true));
     bubble.querySelector('[data-next]').addEventListener('click', () => move(1));
     bubble.querySelector('[data-prev]')?.addEventListener('click', () => move(-1));
   }
 
-  overlay.addEventListener('click', () => stop());
-  window.addEventListener('resize', paint);
+  window.addEventListener('resize', placer);
+  window.addEventListener('scroll', placer, true);
   document.addEventListener('keydown', keys, true);
   paint();
 }

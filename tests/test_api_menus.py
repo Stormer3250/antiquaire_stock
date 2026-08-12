@@ -23,21 +23,30 @@ def test_menu_holds_its_cocktails_in_order(client):
     client.patch(f"/api/menus/{mid}", json={"cocktail_ids": [b, a]})
     menu = client.get("/api/menus").json()["menus"][0]
     assert [c["nom"] for c in menu["cocktails"]] == ["Spritz", "Negroni"]
-    assert client.get("/api/menus").json()["hors_menu"] == []
 
 
-def test_a_cocktail_cannot_join_two_menus(client):
+def test_a_recipe_can_be_on_two_cartes_and_the_first_one_gives_the_price(client):
+    """Le prix hors carte vient de la première carte affichée, et l'écran le dit."""
     a = fiche(client, "Negroni", 14)
-    m1 = client.post("/api/menus", json={"nom": "Carte"}).json()["id"]
-    m2 = client.post("/api/menus", json={"nom": "Été"}).json()["id"]
+    m1 = client.post("/api/menus", json={"nom": "Carte principale"}).json()["id"]
+    m2 = client.post("/api/menus", json={"nom": "Happy hour"}).json()["id"]
     client.patch(f"/api/menus/{m1}", json={"cocktail_ids": [a]})
-    r = client.patch(f"/api/menus/{m2}", json={"cocktail_ids": [a]})
-    assert r.status_code == 422
-    assert "autre menu" in r.json()["detail"]
-    # le premier menu n'a pas été abîmé au passage
-    menus = {m["nom"]: m for m in client.get("/api/menus").json()["menus"]}
-    assert len(menus["Carte"]["cocktails"]) == 1
-    assert menus["Été"]["cocktails"] == []
+    assert client.patch(f"/api/menus/{m2}", json={"cocktail_ids": [a]}).status_code == 200
+
+    t1 = client.post(f"/api/menus/{m1}/tarifs", json={"nom": "Salle"}).json()["id"]
+    t2 = client.post(f"/api/menus/{m2}/tarifs", json={"nom": "18h"}).json()["id"]
+    client.patch(f"/api/tarifs/{t1}", json={"prix": {str(a): 17.0}, "actif": True})
+    client.patch(f"/api/tarifs/{t2}", json={"prix": {str(a): 11.0}, "actif": True})
+
+    c = client.get("/api/cocktails").json()["cocktails"][0]
+    assert [x["nom"] for x in c["cartes"]] == ["Carte principale", "Happy hour"]
+    assert c["prix_ttc"] == 17.0  # la première carte l'emporte
+    assert c["menu_nom"] == "Carte principale"
+
+    # la même recette deux fois dans la MÊME carte reste une seule ligne
+    client.patch(f"/api/menus/{m1}", json={"cocktail_ids": [a, a]})
+    menu = next(m for m in client.get("/api/menus").json()["menus"] if m["id"] == m1)
+    assert len(menu["cocktails"]) == 1
 
 
 def test_activating_a_tarification_deactivates_its_siblings(client):
@@ -104,7 +113,7 @@ def test_deleting_a_menu_frees_its_cocktails(client):
     client.delete(f"/api/menus/{mid}")
     data = client.get("/api/menus").json()
     assert data["menus"] == []
-    assert [c["nom"] for c in data["hors_menu"]] == ["Negroni"]
+    assert [c["nom"] for c in data["recettes"]] == ["Negroni"]
     # la fiche retrouve son prix propre, pas celui de la tarification supprimée
     assert client.get("/api/cocktails").json()["cocktails"][0]["prix_ttc"] == 14
 

@@ -56,24 +56,18 @@ export function openRefModal({ ref = null, suivi = true, onSaved = null } = {}) 
     return `
     <div class="field" style="grid-column:1 / -1; gap:10px;">
       <div class="mono-label">Droits d’alcool</div>
-      <label class="row" style="gap:9px; cursor:pointer;">
-        <input type="checkbox" data-alcoolise ${state.alcoolise ? 'checked' : ''} style="accent-color:var(--ac);">
-        <span style="font-size:12.5px; color:var(--mut);">Cette référence contient de l’alcool</span>
-      </label>
+      <label class="cc-switch"><input type="checkbox" data-alcoolise ${state.alcoolise ? 'checked' : ''}>
+        <span class="piste"></span><span class="txt">Cette référence contient de l’alcool</span></label>
       ${state.alcoolise ? `
       <div class="field"><div class="mono-label">Régime fiscal</div>
         <select class="input" data-regime>
           ${REGIMES.map((r) => `<option value="${r.value}" ${r.value === state.regime ? 'selected' : ''}>${esc(r.label)}${r.value === '' && cat ? ` · ${esc(cat.regime)}` : ''}</option>`).join('')}
         </select></div>
       ${effectif === 'spiritueux' ? `
-      <label class="row" style="gap:9px; cursor:pointer;">
-        <input type="checkbox" data-dom ${state.dom ? 'checked' : ''} style="accent-color:var(--ac);">
-        <span style="font-size:12.5px; color:var(--mut);">Rhum des DOM : taux d’accise réduit</span>
-      </label>` : ''}
-      <label class="row" style="gap:9px; cursor:pointer;">
-        <input type="checkbox" data-droits ${state.droits ? 'checked' : ''} style="accent-color:var(--ac);">
-        <span style="font-size:12.5px; color:var(--mut);">Le prix d’achat ci-dessus inclut déjà les droits</span>
-      </label>` : `
+      <label class="cc-switch"><input type="checkbox" data-dom ${state.dom ? 'checked' : ''}>
+        <span class="piste"></span><span class="txt">Rhum des DOM : taux d’accise réduit</span></label>` : ''}
+      <label class="cc-switch"><input type="checkbox" data-droits ${state.droits ? 'checked' : ''}>
+        <span class="piste"></span><span class="txt">Le prix d’achat ci-dessus inclut déjà les droits</span></label>` : `
       <div class="sub pretty">Aucun droit d’accise ni cotisation : la référence est chiffrée
         au seul prix d’achat.</div>`}
     </div>`;
@@ -135,10 +129,10 @@ export function openRefModal({ ref = null, suivi = true, onSaved = null } = {}) 
     </div>
     <div class="modal-foot">
       <div class="modal-hint">${edit
-        ? 'Les modifications se répercutent sur les fiches cocktails et les prix conseillés.'
+        ? 'Les modifications se répercutent sur les recettes et les prix conseillés.'
         : state.suivi
           ? 'Créée avec un stock à zéro sur chaque lieu — passez une réception pour la remplir.'
-          : 'Aucun stock, aucun seuil : la garniture sert uniquement au chiffrage des fiches.'}</div>
+          : 'Aucun stock, aucun seuil : la garniture sert uniquement au chiffrage des recettes.'}</div>
       <div class="row">
         <button class="btn muted" data-cancel>Annuler</button>
         <button class="btn-solid" data-save>${edit ? 'Enregistrer' : 'Créer'}</button>

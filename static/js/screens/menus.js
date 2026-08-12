@@ -1,5 +1,5 @@
-// Menus & tarifications : regrouper des fiches, tenir plusieurs listes de prix sur les
-// mêmes recettes, et dire laquelle est celle qu'on pratique.
+// Cartes & tarifications : regrouper des recettes, tenir plusieurs listes de prix sur
+// les mêmes recettes, et dire laquelle est celle qu'on pratique.
 
 import { apiGet, apiSend } from '../api.js';
 import { esc, eur, num, pc, confirmModal, alertModal, openModal, closeModal } from '../ui.js';
@@ -8,16 +8,16 @@ import { renderTable, bindTable, tableState } from '../table.js';
 import { openOptimiser } from '../optimiser.js';
 import { exporter } from '../export.js';
 
-let selMenu = null;    // menu ouvert
+let selMenu = null;    // carte ouverte
 let selTarif = null;   // tarification affichée dans la colonne des prix
-const T = 'menu-fiches';
+const T = 'carte-recettes';
 
 function kpisHtml(k, pr) {
   if (!k || !k.n) {
-    return `<div class="empty-note">Aucune fiche dans ce menu pour l’instant.</div>`;
+    return `<div class="empty-note">Aucune recette sur cette carte pour l’instant.</div>`;
   }
   const cases = [
-    ['Fiches', String(k.n), ''],
+    ['Recettes', String(k.n), ''],
     ['Marge moyenne', pc(k.marge_moyenne, 1), `cible ${pc(pr.cible)}`],
     ['Prix moyen', eur(k.prix_moyen), `coût matière ${eur(k.cout_moyen)}`],
     ['Écart cher / pas cher', eur(k.ecart), `${eur(k.prix_mini)} à ${eur(k.prix_maxi)}`],
@@ -32,7 +32,7 @@ function kpisHtml(k, pr) {
         </div>`).join('')}
     </div>
     ${k.sous_plancher
-      ? `<div class="menu-alert">${k.sous_plancher} fiche${k.sous_plancher > 1 ? 's' : ''}
+      ? `<div class="menu-alert">${k.sous_plancher} recette${k.sous_plancher > 1 ? 's' : ''}
           sous le plancher de ${pc(pr.min)}.</div>`
       : ''}`;
 }
@@ -56,7 +56,7 @@ export async function render(el) {
   const menusHtml = `
   <div class="panel">
     <div style="padding:14px 18px; border-bottom:1px solid var(--line);" class="mono-label">
-      Menus · ${menus.length}</div>
+      Cartes · ${menus.length}</div>
     ${menus.map((m) => `
     <div class="row" style="border-left:2px solid ${menu && m.id === menu.id ? 'var(--ac)' : 'transparent'};
       border-bottom:1px solid var(--line2); background:${menu && m.id === menu.id ? 'var(--panel2)' : 'transparent'}; gap:0;">
@@ -65,28 +65,28 @@ export async function render(el) {
         font-family:var(--sans); cursor:pointer;">
         <div style="font-size:13.5px;">${esc(m.nom)}</div>
         <div class="num" style="margin-top:3px; font-size:11px; color:${menu && m.id === menu.id ? 'var(--ac)' : 'var(--mut3)'};">
-          ${m.kpis.n || 0} fiche${(m.kpis.n || 0) > 1 ? 's' : ''}${m.kpis.n ? ` · marge ${pc(m.kpis.marge_moyenne)}` : ''}</div>
+          ${m.kpis.n || 0} recette${(m.kpis.n || 0) > 1 ? 's' : ''}${m.kpis.n ? ` · marge ${pc(m.kpis.marge_moyenne)}` : ''}</div>
       </button>
       <button class="icon-btn danger" data-del-menu="${m.id}" style="margin-right:10px; background:transparent;"
         aria-label="Supprimer">×</button>
     </div>`).join('')}
     <button data-new-menu style="display:block; width:100%; padding:13px 18px; background:transparent; border:none;
       color:var(--ac); text-align:left; font-family:var(--mono); font-size:11px; letter-spacing:.1em;
-      text-transform:uppercase; cursor:pointer;">+ Nouveau menu</button>
+      text-transform:uppercase; cursor:pointer;">+ Nouvelle carte</button>
   </div>`;
 
   if (!menu) {
     el.innerHTML = `
     <div style="display:grid; grid-template-columns:266px 1fr; gap:18px; align-items:start;">
       ${menusHtml}
-      <div class="panel"><div class="empty-note">Créez un menu pour regrouper des fiches et
+      <div class="panel"><div class="empty-note">Créez une carte pour regrouper des recettes et
         leur poser une ou plusieurs tarifications.</div></div>
     </div>`;
     lierMenus(el, menus, rafraichir);
     return;
   }
 
-  // ---------- table des fiches du menu ----------
+  // ---------- table des recettes de la carte ----------
 
   const prixDe = (c) => (tarif && tarif.prix[String(c.id)] !== undefined
     ? tarif.prix[String(c.id)]
@@ -109,7 +109,7 @@ export async function render(el) {
     columns: [
       {
         key: 'nom',
-        label: 'Fiche',
+        label: 'Recette',
         cell: (c) => `<div class="cell-main"><div class="nom">${esc(c.nom)}</div>
           <div class="sub">${esc(c.famille || '')}${c.prix_fixe ? ' · prix figé' : ''}</div></div>`,
       },
@@ -125,7 +125,7 @@ export async function render(el) {
         align: 'r',
         cell: (c) => `<input class="input num" data-prix="${c.id}" value="${num(prixDe(c), 2)}"
           aria-label="Prix de ${esc(c.nom)}" style="max-width:96px; justify-self:end;"
-          ${c.prix_fixe ? 'title="Prix figé sur la fiche"' : ''}>`,
+          ${c.prix_fixe ? 'title="Prix figé sur la recette"' : ''}>`,
       },
       {
         key: 'marge',
@@ -147,7 +147,7 @@ export async function render(el) {
         label: '',
         sortable: false,
         cell: (c) => `<button class="icon-btn danger" data-retirer="${c.id}"
-          aria-label="Retirer du menu" title="Retirer du menu">×</button>`,
+          aria-label="Retirer de la carte" title="Retirer de la carte">×</button>`,
       },
     ],
     summary: (picked) => {
@@ -169,8 +169,8 @@ export async function render(el) {
         rafraichir();
       });
     },
-    empty: `<div class="empty-note">Ce menu ne contient aucune fiche. Ajoutez-en avec
-      « + Ajouter des fiches ».</div>`,
+    empty: `<div class="empty-note">Cette carte ne contient aucune recette. Ajoutez-en
+      avec « + Ajouter des recettes ».</div>`,
   };
 
   // ---------- colonne des tarifications ----------
@@ -182,8 +182,8 @@ export async function render(el) {
       <button class="btn" data-new-tarif>+ Nouvelle</button>
     </div>
     ${tarifs.length === 0
-      ? `<div class="empty-note">Aucune tarification : le menu applique le prix propre à
-          chaque fiche. Créez-en une pour poser une grille de prix.</div>`
+      ? `<div class="empty-note">Aucune tarification : la carte applique le prix propre à
+          chaque recette. Créez-en une pour poser une grille de prix.</div>`
       : tarifs.map((t) => `
       <div class="tarif-row ${t.id === selTarif ? 'on' : ''}">
         <button data-tarif="${t.id}" class="tarif-pick">
@@ -220,12 +220,12 @@ export async function render(el) {
       </div>
       <div class="panel">
         <div class="panel-head">
-          <div class="serif-title">Fiches du menu</div>
+          <div class="serif-title">Recettes de la carte</div>
           <div class="row" style="gap:9px; align-items:center;">
             <span class="mono-label" style="color:var(--mut3);">
-              ${tarif ? `prix de « ${esc(tarif.nom)} »${tarif.actif ? '' : ', non appliquée'}` : 'prix propres aux fiches'}</span>
+              ${tarif ? `prix de « ${esc(tarif.nom)} »${tarif.actif ? '' : ', non appliquée'}` : 'prix propres aux recettes'}</span>
             <button class="btn" data-export>Exporter</button>
-            <button class="btn" data-ajouter>+ Ajouter des fiches</button>
+            <button class="btn" data-ajouter>+ Ajouter des recettes</button>
           </div>
         </div>
         <div data-fiches></div>
@@ -248,7 +248,7 @@ export async function render(el) {
     }
   });
 
-  // prix : écrit dans la tarification consultée, ou sur la fiche s'il n'y en a aucune
+  // prix : écrit dans la tarification consultée, ou sur la recette s'il n'y en a aucune
   fichesEl.querySelectorAll('[data-prix]').forEach((inp) => {
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
     inp.addEventListener('blur', async () => {
@@ -272,13 +272,13 @@ export async function render(el) {
   );
 
   el.querySelector('[data-ajouter]').addEventListener('click', () =>
-    ajouterFiches(menu, data.hors_menu, rafraichir)
+    ajouterFiches(menu, data.recettes.filter((c) => !menu.cocktails.some((x) => x.id === c.id)), rafraichir)
   );
   el.querySelector('[data-export]').addEventListener('click', () =>
     exporter({
       titre: menu.nom,
-      fichier: `menu-${menu.nom}`,
-      colonnes: ['Fiche', 'Famille', 'Coût matière', 'Prix TTC', 'Marge %', 'Marge cible %'],
+      fichier: `carte-${menu.nom}`,
+      colonnes: ['Recette', 'Famille', 'Coût matière', 'Prix TTC', 'Marge %', 'Marge cible %'],
       lignes: menu.cocktails.map((c) => [
         c.nom, c.famille, c.cost, prixDe(c), margeDe(c), c.marge_cible,
       ]),
@@ -332,7 +332,7 @@ export async function render(el) {
       const ok = await confirmModal({
         title: `Supprimer « ${t.nom} » ?`,
         body: t.actif
-          ? 'C’est la tarification appliquée : les fiches reviendront à leur prix propre.'
+          ? 'C’est la tarification appliquée : les recettes reviendront à leur prix propre.'
           : 'Ses prix seront perdus. Les autres tarifications ne bougent pas.',
       });
       if (!ok) return;
@@ -353,7 +353,7 @@ function lierMenus(el, menus, rafraichir) {
     b.addEventListener('click', () => {
       selMenu = Number(b.dataset.menu);
       selTarif = null;
-      tableState('menu-fiches').selected.clear();
+      tableState(T).selected.clear();
       rafraichir();
     })
   );
@@ -367,8 +367,8 @@ function lierMenus(el, menus, rafraichir) {
     b.addEventListener('click', async () => {
       const m = menus.find((x) => x.id === Number(b.dataset.delMenu));
       const ok = await confirmModal({
-        title: `Supprimer le menu « ${m.nom} » ?`,
-        body: 'Ses tarifications disparaissent. Les fiches, elles, sont conservées et redeviennent libres.',
+        title: `Supprimer la carte « ${m.nom} » ?`,
+        body: 'Ses tarifications disparaissent. Les recettes, elles, sont conservées : elles restent sur leurs autres cartes, ou reprennent leur prix propre.',
       });
       if (!ok) return;
       await apiSend('DELETE', `/api/menus/${m.id}`);
@@ -378,19 +378,19 @@ function lierMenus(el, menus, rafraichir) {
   );
 }
 
-// ---------- ajouter des fiches ----------
+// ---------- ajouter des recettes ----------
 
 function ajouterFiches(menu, libres, rafraichir) {
   if (!libres.length) {
     alertModal({
-      title: 'Aucune fiche disponible',
-      body: 'Toutes les fiches appartiennent déjà à un menu. Retirez-en une de son menu, ou créez une nouvelle fiche depuis Cartes & recettes.',
+      title: 'Aucune recette disponible',
+      body: 'Toutes les recettes figurent déjà sur cette carte. Créez-en une nouvelle depuis l’écran Recettes.',
     });
     return;
   }
   const modal = openModal(`
     <div class="modal-head">
-      <div class="serif-title">Ajouter des fiches</div>
+      <div class="serif-title">Ajouter des recettes</div>
       <button class="modal-x" aria-label="Fermer">×</button>
     </div>
     <div class="modal-body" style="max-height:52vh; overflow:auto; display:flex; flex-direction:column; gap:2px;">
@@ -402,7 +402,7 @@ function ajouterFiches(menu, libres, rafraichir) {
       </label>`).join('')}
     </div>
     <div class="modal-foot">
-      <div class="modal-hint">Seules les fiches n’appartenant à aucun menu sont proposées.</div>
+      <div class="modal-hint">Une recette peut figurer sur plusieurs cartes : seules celles déjà sur celle-ci sont masquées.</div>
       <div class="row">
         <button class="btn muted" data-cancel>Annuler</button>
         <button class="btn-solid" data-ok>Ajouter</button>
@@ -495,7 +495,7 @@ function comparer(menu, tarifs, pr) {
         <div><select class="input" data-b>${opts(b)}</select></div>
         <div class="mono-label r">Écart</div>
       </div>
-      <div style="max-height:46vh; overflow:auto;">${lignes || '<div class="empty-note">Menu vide.</div>'}</div>
+      <div style="max-height:46vh; overflow:auto;">${lignes || '<div class="empty-note">Carte vide.</div>'}</div>
       <div class="cmp-row cmp-foot">
         <div class="mono-label">Marge moyenne · prix moyen</div>
         <div class="num r">${bilan(ta)}</div>

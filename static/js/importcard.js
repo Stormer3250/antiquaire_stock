@@ -68,10 +68,10 @@ function cardHtml() {
             ${S.meta.categories.filter((c) => c.nom !== 'Consommable').map((c) => `<option value="${c.id}" ${imp.cat === c.id ? 'selected' : ''}>${esc(c.nom)}</option>`).join('')}
           </select></div>
       </div>
-      <label class="row" style="gap:9px; cursor:pointer;">
-        <input type="checkbox" data-imp-createcats ${imp.createCats ? 'checked' : ''} style="accent-color:var(--ac);">
-        <span style="font-size:12px; color:var(--mut);">Créer les catégories inconnues
-          (sinon leurs lignes sont ignorées)</span>
+      <label class="cc-switch">
+        <input type="checkbox" data-imp-createcats ${imp.createCats ? 'checked' : ''}>
+        <span class="piste"></span>
+        <span class="txt">Créer les catégories inconnues (sinon leurs lignes sont ignorées)</span>
       </label>
       <div style="border-top:1px solid var(--line2); padding-top:12px; display:flex; flex-direction:column; gap:7px;">
         <div class="mono-label">Aperçu · ${d.row_count} ligne${d.row_count > 1 ? 's' : ''} lue${d.row_count > 1 ? 's' : ''}</div>

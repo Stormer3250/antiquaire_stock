@@ -36,7 +36,7 @@ export async function render(el) {
 
   el.innerHTML = `
   <div style="display:grid; grid-template-columns:1.1fr 1fr; gap:18px; align-items:start;">
-    <div class="panel">
+    <div class="panel" data-section="taux">
       <div class="panel-head"><div class="serif-title">Barème des droits d’alcool</div></div>
       ${PARAMS.map((p) => `
       <div class="row spread" style="padding:14px 20px; border-bottom:1px solid var(--line2); gap:18px;">
@@ -54,7 +54,7 @@ export async function render(el) {
         et le coût des références dont les droits ne sont pas inclus dans l’achat.</span></div>
     </div>
 
-    <div class="panel">
+    <div class="panel" data-section="effet-dose">
       <div class="panel-head"><div class="serif-title">Effet sur la dose</div></div>
       ${examples.length === 0
         ? `<div class="empty-note">Créez des références suivies pour voir l’effet du barème sur leurs doses.</div>`
@@ -73,7 +73,7 @@ export async function render(el) {
       <div class="panel-foot"><span>Taxe par dose</span><span>part du coût matière</span></div>
     </div>
 
-    <div class="panel" style="grid-column:1 / -1;">
+    <div class="panel" style="grid-column:1 / -1;" data-section="historique-taux">
       <div class="panel-head">
         <div>
           <div class="serif-title">Historique du barème</div>

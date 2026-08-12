@@ -1,6 +1,7 @@
 // Cave & seuils : maintien du stock, garnitures non suivies, import de fichier.
 
 import { apiGet, apiSend } from '../api.js';
+import { icone } from '../icons.js';
 import { esc, eur, num, parseNum, confirmModal } from '../ui.js';
 import { S, refresh, lieuQuery, fmtStock } from '../app.js';
 import { openRefModal } from '../refmodal.js';
@@ -62,7 +63,7 @@ export async function render(el) {
           : '<div class="num r" style="font-size:10.5px; color:var(--ok-ink); justify-self:end;">suffisant</div>') },
       { key: 'actions', label: '', sortable: false,
         cell: (r) => `<div class="row" style="gap:5px; justify-self:end;">
-          <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer">ÉD</button>
+          <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer" title="Éditer">${icone('crayon', 15)}</button>
           <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button></div>` },
     ],
     // Ici la question est « qu'est-ce que je dois racheter, et pour combien ».
@@ -124,7 +125,7 @@ export async function render(el) {
         cell: (r) => `<div class="num r created-at">${r.created_at.slice(0, 10)}</div>` },
       { key: 'actions', label: '', sortable: false,
         cell: (r) => `<div class="row" style="gap:5px; justify-self:end;">
-          <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer">ÉD</button>
+          <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer" title="Éditer">${icone('crayon', 15)}</button>
           <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button></div>` },
     ],
     summary: (picked) => `
@@ -141,9 +142,9 @@ export async function render(el) {
       });
     },
     empty: `<div class="empty-note">Aucune garniture : elles servent uniquement à chiffrer
-      les fiches cocktails.</div>`,
+      les recettes.</div>`,
     foot: `<span class="pretty">Ni stock, ni seuil, ni inventaire : ces références servent
-      uniquement à chiffrer les fiches cocktails.</span>`,
+      uniquement à chiffrer les recettes.</span>`,
   };
 
   el.innerHTML = `
@@ -154,7 +155,7 @@ export async function render(el) {
           <div class="serif-title">Maintien du stock</div>
           <div style="font-size:12.5px; color:var(--mut3);">Seuil d’alerte, stock cible, prix d’achat et marge</div>
         </div>
-        <div data-suivies></div>
+        <div data-suivies data-section="seuils"></div>
       </div>
 
       <div class="panel">
@@ -162,12 +163,12 @@ export async function render(el) {
           <div class="serif-title">Références non suivies</div>
           <button class="btn" data-new-untracked>+ Garniture</button>
         </div>
-        <div data-garnitures></div>
+        <div data-garnitures data-section="garnitures"></div>
       </div>
     </div>
 
     <div class="stack" style="gap:14px;">
-      <div class="panel">
+      <div class="panel" data-section="import">
         <div style="padding:15px 18px; border-bottom:1px solid var(--line);" class="serif-title">
           Mise à jour par fichier</div>
         <div data-import-card></div>
@@ -236,7 +237,7 @@ export async function render(el) {
       const r = stockData.refs.find((x) => x.id === Number(b.dataset.del));
       const ok = await confirmModal({
         title: `Supprimer ${r.nom} ?`,
-        body: 'La référence disparaît de la cave et des listes. Les fiches cocktails qui l’utilisent devront être corrigées.',
+        body: 'La référence disparaît de la cave et des listes. Les recettes qui l’utilisent devront être corrigées.',
       });
       if (!ok) return;
       await apiSend('DELETE', `/api/refs/${r.id}`);
