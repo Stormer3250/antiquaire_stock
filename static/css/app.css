@@ -355,6 +355,15 @@ select.input option { background: var(--input); color: var(--ink); }
 .grow { flex: 1; min-width: 0; }
 .stack { display: flex; flex-direction: column; gap: 16px; }
 
+/* ---------- barre gelée commune (viewbar) ---------- */
+
+.vbar { position: sticky; top: 74px; z-index: 5; display: flex; gap: 10px;
+  align-items: center; padding: 10px 0 14px; background: var(--bg); }
+.vb-views { display: flex; border: 1px solid var(--line3); }
+.vb-views button { width: 34px; height: 34px; display: grid; place-items: center;
+  background: transparent; border: none; color: var(--mut3); cursor: pointer; }
+.vb-views button.active { background: var(--panel2); color: var(--ac); }
+
 /* pied de barre latérale : quelle version tourne ici */
 .build-stamp {
   margin-top: 10px;
