@@ -259,6 +259,25 @@ select.input option { background: var(--input); color: var(--ink); }
 }
 .empty-note { padding: 26px 20px; font-size: 13px; color: var(--mut2); text-wrap: pretty; }
 
+/* ---------- vue en blocs ---------- */
+
+.blocs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px; padding: 14px 0; }
+.bloc { display: flex; flex-direction: column; gap: 6px; text-align: left;
+  height: 148px; padding: 16px 18px; background: var(--panel);
+  border: 1px solid var(--line); cursor: pointer; font-family: var(--sans); color: var(--ink); }
+.bloc:hover { border-color: var(--line3); background: var(--panel2); }
+.bloc-nom { font-family: var(--serif); font-size: 18px; line-height: 1.15;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bloc-sub { font-size: 12px; color: var(--mut3); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.bloc-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line2); }
+.bloc-kpi .mono-label { font-size: 8.5px; color: var(--mut3); }
+.kpi-val { font-family: var(--mono); font-size: 13px; margin-top: 3px; }
+.kpi-val.ok { color: var(--ok-ink); }
+.kpi-val.warn { color: var(--red2); }
+
 .bar-track { height: 5px; background: #241D19; }
 .bar-fill { height: 5px; background: var(--ac); }
 
