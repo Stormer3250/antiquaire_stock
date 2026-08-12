@@ -128,6 +128,7 @@ export async function render(el) {
     grid: UGRID,
     select: true,
     rows: untrackedVisible,
+    universe: untracked,   // une garniture masquée par la recherche reste cochée
     columns: [
       {
         key: 'nom',
@@ -146,11 +147,12 @@ export async function render(el) {
           <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer" title="Éditer">${icone('crayon', 15)}</button>
           <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button></div>` },
     ],
-    summary: (picked) => `
+    summary: (picked, _rows, masquees) => `
       <div class="sum-figs">
         <span class="sum-count">${picked.length} retenue${picked.length > 1 ? 's' : ''}</span>
+        ${masquees ? `<span class="sum-hidden">+ ${masquees} hors filtre</span>` : ''}
         <span>Coût unitaire cumulé <b class="num">${eur(picked.reduce((a, r) => a + r.cout_dose, 0))}</b></span>
-        <span>Coût moyen <b class="num">${eur(picked.reduce((a, r) => a + r.cout_dose, 0) / picked.length)}</b></span>
+        <span>Coût moyen <b class="num">${picked.length ? eur(picked.reduce((a, r) => a + r.cout_dose, 0) / picked.length) : '—'}</b></span>
       </div>
       <div class="row"><button class="btn muted" data-unpick>Tout décocher</button></div>`,
     bindSummary: (bar) => {
@@ -209,9 +211,14 @@ export async function render(el) {
             <div class="mono-label" style="color:var(--mut2);">Historique des imports</div>
             <div data-import-history></div>
           </div>`, { width: 480 });
-        mountImportCard(modal.querySelector('[data-import-card]'), { onApplied: () => render(el) });
-        const importsData = await apiGet('/api/imports');
-        modal.querySelector('[data-import-history]').innerHTML = historiqueHtml(importsData.imports);
+        const refreshHistory = async () => {
+          const importsData = await apiGet('/api/imports');
+          modal.querySelector('[data-import-history]').innerHTML = historiqueHtml(importsData.imports);
+        };
+        mountImportCard(modal.querySelector('[data-import-card]'), {
+          onApplied: () => { render(el); refreshHistory(); },
+        });
+        refreshHistory();
       }
     },
   });
