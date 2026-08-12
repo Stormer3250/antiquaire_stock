@@ -19,8 +19,14 @@ export function num(n, d) {
   });
 }
 
-export function pc(n, d = 0) {
-  return num(n, d) + ' %';
+let PCT_D = 0;               // décimales des pourcentages, réglées dans Paramètres
+
+export function setPctDecimales(d) {
+  PCT_D = Number.isInteger(d) && d >= 0 && d <= 2 ? d : 0;
+}
+
+export function pc(n, d) {
+  return num(n, d === undefined ? PCT_D : d) + ' %';
 }
 
 export function parseNum(v) {
@@ -36,35 +42,43 @@ const root = () => document.getElementById('modal-root');
 
 // Échap ferme la surface du dessus. Chaque ouvreur dit ici comment il veut être fermé :
 // une modale ordinaire disparaît, une confirmation doit en plus répondre « non ».
-let onEscape = null;
+// Les modales peuvent s'empiler (`openModal(html, { stack: true })`) : d'où une pile de
+// gestionnaires, dont le dernier est toujours la surface visible du dessus.
+let escapes = [];
 // le garde-fou permet d'importer ce module hors navigateur (auto-vérifications)
 if (typeof document !== 'undefined') document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape' || !onEscape) return;
+  if (e.key !== 'Escape' || !escapes.length) return;
   // une liste déroulante ouverte se ferme d'abord : Échap vise toujours la surface
   // la plus intérieure, jamais la fenêtre qui la contient
   if (document.querySelector('.cc-sel-panel')) return;
   e.preventDefault();
-  const fn = onEscape;
-  onEscape = null;
-  fn();
+  // on ne dépile PAS ici : c'est `closeModal` qui dépile, et tout gestionnaire finit par
+  // lui (la palette, les confirmations comprises). Dépiler des deux côtés retirerait le
+  // gestionnaire de la surface du dessous, qu'Échap ne fermerait plus.
+  escapes[escapes.length - 1]();
 }, true);
 
-// Pour les surfaces qui écrivent elles-mêmes dans modal-root (la palette).
+// Pour les surfaces qui écrivent elles-mêmes dans modal-root (la palette, les
+// confirmations) : elles remplacent tout ce qui était ouvert, la pile comprise.
 export function setEscape(fn) {
-  onEscape = fn;
+  escapes = fn ? [fn] : [];
 }
 
 export function closeModal() {
-  root().innerHTML = '';
-  onEscape = null;
+  const r = root();
+  escapes.pop();
+  // pile : on ne retire que la surface du dessus, celle du dessous reste en place
+  if (r.childElementCount > 1) { r.lastElementChild.remove(); return; }
+  r.innerHTML = '';
   release('modal');
 }
 
-export function openModal(html, { width } = {}) {
+export function openModal(html, { width, stack } = {}) {
   claim('modal');
-  onEscape = closeModal;
-  root().innerHTML = `<div class="scrim"><div class="modal"${width ? ` style="width:${width}px"` : ''}>${html}</div></div>`;
-  const scrim = root().firstElementChild;
+  const surface = `<div class="scrim"><div class="modal"${width ? ` style="width:${width}px"` : ''}>${html}</div></div>`;
+  if (stack) { root().insertAdjacentHTML('beforeend', surface); escapes.push(closeModal); }
+  else { root().innerHTML = surface; escapes = [closeModal]; }
+  const scrim = root().lastElementChild;
   scrim.addEventListener('mousedown', (e) => { if (e.target === scrim) closeModal(); });
   const x = scrim.querySelector('.modal-x');
   if (x) x.addEventListener('click', closeModal);
@@ -73,6 +87,11 @@ export function openModal(html, { width } = {}) {
   return scrim.querySelector('.modal');
 }
 
+// Confirmations et alertes restent DESTRUCTRICES : elles écrivent tout modal-root et
+// balaient donc la pile. C'est le contrat en place partout (fiche.js, recettemodal.js) —
+// on pose `dialogue = true`, et on rouvre sa propre modale après. Les empiler aussi
+// obligerait à défaire ce réflexe dans chaque appelant, pour un gain nul : une question
+// bloquante n'a rien à laisser visible derrière elle.
 export function confirmModal({ title, body, label = 'Supprimer' }) {
   return new Promise((resolve) => {
     root().innerHTML = `
@@ -89,7 +108,7 @@ export function confirmModal({ title, body, label = 'Supprimer' }) {
     const scrim = root().firstElementChild;
     const done = (v) => { closeModal(); resolve(v); };
     claim('modal');
-    onEscape = () => done(false);   // Échap sur une confirmation vaut « non »
+    setEscape(() => done(false));   // Échap sur une confirmation vaut « non »
     scrim.querySelector('[data-no]').addEventListener('click', () => done(false));
     scrim.querySelector('[data-yes]').addEventListener('click', () => done(true));
     scrim.addEventListener('mousedown', (e) => { if (e.target === scrim) done(false); });
@@ -113,9 +132,22 @@ export function alertModal({ title, body = '' }) {
     const scrim = root().firstElementChild;
     const done = () => { closeModal(); resolve(); };
     claim('modal');
-    onEscape = done;
+    setEscape(done);
     scrim.querySelector('[data-ok]').addEventListener('click', done);
     scrim.addEventListener('mousedown', (e) => { if (e.target === scrim) done(); });
     scrim.querySelector('[data-ok]').focus();
   });
 }
+
+function demo() {
+  const assert = (c, m) => { if (!c) throw new Error(m); };
+  assert(pc(72.46) === '72 %', 'défaut : entier');
+  setPctDecimales(1);
+  assert(pc(72.46) === '72,5 %', 'réglage appliqué');
+  assert(pc(72.46, 0) === '72 %', 'un d explicite gagne toujours');
+  setPctDecimales(9);
+  assert(pc(72.46) === '72 %', 'valeur hors bornes → 0');
+  setPctDecimales(0);
+}
+
+if (typeof process !== 'undefined' && /ui\.m?js$/.test(process.argv?.[1] || '')) demo();

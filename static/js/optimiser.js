@@ -3,7 +3,7 @@
 // et la proposition dit aussi ce qu'elle n'a pas pu tenir.
 
 import { apiSend } from './api.js';
-import { esc, eur, pc, openModal, closeModal, alertModal } from './ui.js';
+import { esc, eur, pc, openModal, closeModal } from './ui.js';
 
 const CHAMPS = [
   { key: 'prix_min', label: 'Prix mini (€)', ph: 'ex. 9' },
@@ -12,8 +12,18 @@ const CHAMPS = [
   { key: 'ecart_max', label: 'Écart maxi cher / pas cher (€)', ph: 'ex. 5' },
 ];
 
-export function openOptimiser({ tarif, onApplied }) {
+// `stack` : ouverte par-dessus une autre modale (la modale carte), qui doit rester en
+// place dessous. On remplace alors NOTRE surface à chaque étape au lieu d'empiler.
+export function openOptimiser({ tarif, onApplied, stack = false }) {
   const valeurs = {};
+  let erreur = '';
+  let posee = false;
+
+  function ouvre(html, width) {
+    if (stack && posee) closeModal();
+    posee = true;
+    return openModal(html, { width, stack });
+  }
 
   function formulaire() {
     return `
@@ -25,13 +35,15 @@ export function openOptimiser({ tarif, onApplied }) {
       ${CHAMPS.map((c) => `
       <div class="field">
         <div class="mono-label">${esc(c.label)}</div>
-        <input class="input num" data-c="${c.key}" value="${valeurs[c.key] ?? ''}"
+        <input class="input num" data-c="${c.key}" value="${esc(valeurs[c.key] ?? '')}"
           placeholder="${esc(c.ph)}">
       </div>`).join('')}
     </div>
     <div class="modal-foot">
-      <div class="modal-hint">Laissez vide ce que vous ne voulez pas contraindre. Les recettes
-        au prix figé ne bougeront pas.</div>
+      <div class="modal-hint" ${erreur ? 'style="color:var(--warn-mut);"' : ''}>${erreur
+        ? esc(erreur)
+        : `Laissez vide ce que vous ne voulez pas contraindre. Les recettes
+        au prix figé ne bougeront pas.`}</div>
       <div class="row">
         <button class="btn muted" data-cancel>Annuler</button>
         <button class="btn-solid" data-go>Calculer</button>
@@ -53,7 +65,7 @@ export function openOptimiser({ tarif, onApplied }) {
       <div class="${r.violations.length ? 'card-warn' : 'card-ok'}" style="padding:16px 18px;">
         <div style="font-size:14px; line-height:1.6;">
           <b>${s.n} recette${s.n > 1 ? 's' : ''}, ${s.changees} prix change${s.changees > 1 ? 'nt' : ''}.</b><br>
-          Marge moyenne ${pc(s.marge_avant, 1)} → <b>${pc(s.marge_apres, 1)}</b> ·
+          Marge moyenne ${pc(s.marge_avant)} → <b>${pc(s.marge_apres)}</b> ·
           écart ${eur(s.ecart_avant)} → <b>${eur(s.ecart_apres)}</b> ·
           ${s.sous_plancher
             ? `<b class="warn-text">${s.sous_plancher} sous le plancher</b>`
@@ -75,8 +87,8 @@ export function openOptimiser({ tarif, onApplied }) {
         <div class="cmp-row">
           <div class="cell-main"><div class="nom">${esc(li.nom)}${li.verrouille ? ' · figé' : ''}</div>
             <div class="sub">coût ${eur(li.cost)}</div></div>
-          <div class="num r">${eur(li.prix_avant)}<span class="cmp-marge">${pc(li.marge_avant, 1)}</span></div>
-          <div class="num r">${eur(li.prix_apres)}<span class="cmp-marge">${pc(li.marge_apres, 1)}</span></div>
+          <div class="num r">${eur(li.prix_avant)}<span class="cmp-marge">${pc(li.marge_avant)}</span></div>
+          <div class="num r">${eur(li.prix_apres)}<span class="cmp-marge">${pc(li.marge_apres)}</span></div>
           <div class="num r ${li.delta > 0 ? 'ok-text' : li.delta < 0 ? 'warn-text' : ''}">
             ${Math.abs(li.delta) < 0.005 ? '—' : (li.delta > 0 ? '+' : '') + eur(li.delta)}
             <span class="cmp-marge">${esc(fleche(li.delta))}</span></div>
@@ -94,7 +106,7 @@ export function openOptimiser({ tarif, onApplied }) {
   }
 
   function monterFormulaire() {
-    const modal = openModal(formulaire(), { width: 520 });
+    const modal = ouvre(formulaire(), 520);
     modal.querySelectorAll('[data-c]').forEach((inp) =>
       inp.addEventListener('input', () => { valeurs[inp.dataset.c] = inp.value; })
     );
@@ -105,19 +117,23 @@ export function openOptimiser({ tarif, onApplied }) {
         const v = String(valeurs[c.key] ?? '').trim();
         if (v === '') continue;
         const n = parseFloat(v.replace(',', '.'));
+        // dit dans le formulaire, pas dans une alerte : une alerte vide modal-root et
+        // emporterait la modale du dessous quand on est empilé
         if (Number.isNaN(n)) {
-          await alertModal({ title: 'Valeur illisible', body: `${c.label} : saisissez un nombre.` });
+          erreur = `${c.label} : saisissez un nombre.`;
+          monterFormulaire();
           return;
         }
         body[c.key] = n;
       }
+      erreur = '';
       const r = await apiSend('POST', `/api/tarifs/${tarif.id}/optimiser`, body);
       monterResultat(r);
     });
   }
 
   function monterResultat(r) {
-    const modal = openModal(resultat(r), { width: 760 });
+    const modal = ouvre(resultat(r), 760);
     modal.querySelector('[data-retour]').addEventListener('click', monterFormulaire);
     const btn = modal.querySelector('[data-appliquer]');
     if (!r.resume.changees) return;

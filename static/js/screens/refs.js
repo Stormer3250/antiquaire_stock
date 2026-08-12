@@ -1,31 +1,32 @@
 // Le grand registre : recherche, filtre catégorie, table des références.
 
 import { apiGet, apiSend } from '../api.js';
-import { icone } from '../icons.js';
 import { esc, eur, num, pc, confirmModal, openModal } from '../ui.js';
-import { S, go, refresh, lieuQuery, fmtStock } from '../app.js';
-import { openRefModal } from '../refmodal.js';
+import { S, refresh, lieuQuery, fmtStock } from '../app.js';
+import { openFiche } from '../fiche.js';
 import { mountImportCard } from '../importcard.js';
 import { renderTable, bindTable, tableState } from '../table.js';
+import { renderBlocks } from '../blocks.js';
+import { barState, renderBar } from '../viewbar.js';
 import { openBulkModal } from '../bulkmodal.js';
 import { exporter } from '../export.js';
 
-const F = { query: '', cat: 'Tout' };  // filtres persistants pendant la session
-const TABLE = 'refs';                  // tri et sélection vivent dans table.js
+const TABLE = 'refs';                  // tri et sélection (vue table) vivent dans table.js
+const SORT_OPTIONS = [
+  ['nom', 'Nom'], ['stock', 'Stock'], ['cout_dose', 'Coût unitaire'],
+  ['prix', 'Prix conseillé'], ['marge_reelle', 'Marge'], ['created_at', 'Créée le'],
+];
 
-const GRID = '2.2fr .9fr .5fr .6fr .8fr .8fr .6fr .8fr 150px';
+const GRID = '2.2fr .9fr .5fr .6fr .8fr .8fr .6fr .8fr 120px';
 
 export async function render(el) {
+  const st = barState('refs');
   const data = await apiGet(`/api/stock?lieu=${lieuQuery()}`);
   const rows = data.refs.filter((r) => r.categorie_nom !== 'Consommable');
-  const q = F.query.toLowerCase();
+  const q = st.search.toLowerCase();
   const filtered = rows.filter(
-    (r) =>
-      (F.cat === 'Tout'
-        || (F.cat === '__untracked' ? !r.suivi : String(r.categorie_id) === F.cat))
-      && (q === '' || `${r.nom} ${r.marque} ${r.fournisseur}`.toLowerCase().includes(q))
+    (r) => q === '' || `${r.nom} ${r.marque} ${r.fournisseur}`.toLowerCase().includes(q)
   );
-  const cats = S.meta.categories.filter((c) => c.nom !== 'Consommable');
   const pr = S.meta.pricing;
 
   const columns = [
@@ -92,7 +93,6 @@ export async function render(el) {
       cell: (r) => `
         <div class="row row-actions" style="gap:5px; justify-self:end;">
           <span class="num created-at">${r.created_at.slice(0, 10)}</span>
-          <button class="icon-btn" data-edit="${r.id}" aria-label="Éditer" title="Éditer">${icone('crayon', 15)}</button>
           <button class="icon-btn danger" data-del="${r.id}" aria-label="Supprimer">×</button>
         </div>`,
     },
@@ -116,7 +116,7 @@ export async function render(el) {
         ${masquees ? `<span class="sum-hidden">+ ${masquees} hors filtre, non touchée${masquees > 1 ? 's' : ''}</span>` : ''}
         <span>Valeur HT <b class="num">${eur(valeur)}</b></span>
         <span>Coût unitaire moyen <b class="num">${cout === null ? '—' : eur(cout)}</b></span>
-        <span>Marge moyenne <b class="num ${marge !== null && marge < pr.min ? 'warn-text' : ''}">${marge === null ? '—' : pc(marge, 1)}</b></span>
+        <span>Marge moyenne <b class="num ${marge !== null && marge < pr.min ? 'warn-text' : ''}">${marge === null ? '—' : pc(marge)}</b></span>
         <span>Sous le plancher <b class="num">${basses}</b></span>
         <span>Sous le seuil <b class="num">${sousSeuil}</b></span>
       </div>
@@ -125,6 +125,13 @@ export async function render(el) {
         <button class="btn muted" data-unpick>Tout décocher</button>
       </div>`;
   };
+
+  const emptyNote = rows.length === 0
+    ? `<div class="empty-note">Le registre est vide. Créez une référence avec « + Référence »
+        en haut, ou cliquez « Importer un fichier » pour charger votre catalogue Excel.</div>`
+    : `<div class="empty-note">Aucune référence ne correspond à cette recherche.</div>`;
+
+  const group = { on: st.group, label: (r) => r.categorie_nom, collapsed: st.collapsed };
 
   const spec = {
     id: TABLE,
@@ -135,13 +142,11 @@ export async function render(el) {
     grid: GRID,
     select: true,
     summary,
-    empty: rows.length === 0
-      ? `<div class="empty-note">Le registre est vide. Créez une référence avec « + Référence »
-          en haut, ou cliquez « Importer un fichier » pour charger votre catalogue Excel.</div>`
-      : `<div class="empty-note">Aucune référence ne correspond à cette recherche.</div>`,
+    empty: emptyNote,
+    group,
     foot: `<span>${filtered.length} référence${filtered.length > 1 ? 's' : ''} affichée${filtered.length > 1 ? 's' : ''}</span>
       <span>Prix conseillés TTC · marge cible ${pc(pr.cible)} · « · » = prix fixé à la main</span>`,
-    onRowClick: (r) => (r.suivi ? go(`#/product/${r.id}`) : openRefModal({ ref: r })),
+    onRowClick: (r) => openFiche(r.id, { onClose: () => render(el) }),
     bindSummary: (bar, picked) => {
       const bulk = bar.querySelector('[data-bulk]');
       if (bulk) {
@@ -157,76 +162,91 @@ export async function render(el) {
   };
 
   el.innerHTML = `
-  <div class="row" style="margin-bottom:16px; gap:12px;">
-    <input class="input grow" data-q value="${esc(F.query)}" style="padding:11px 14px; font-size:13.5px;"
-      placeholder="Chercher une bouteille, une marque, un fournisseur…">
-    <div style="width:210px;">
-      <select class="input" data-cat>
-        <option value="Tout">Toutes catégories</option>
-        ${cats.map((c) => `<option value="${c.id}" ${String(c.id) === F.cat ? 'selected' : ''}>${esc(c.nom)}</option>`).join('')}
-        <option value="__untracked" ${F.cat === '__untracked' ? 'selected' : ''}>Non suivies</option>
-      </select>
-    </div>
-    <button class="btn" data-import style="padding:11px 14px;">Importer un fichier</button>
-    <button class="btn" data-export style="padding:11px 14px;">Exporter</button>
-  </div>
-  <div class="panel" data-table data-section="registre"></div>`;
+  <div data-bar></div>
+  <div data-content></div>`;
 
-  const table = el.querySelector('[data-table]');
-  renderTable(table, spec);
-  bindTable(table, spec, () => render(el));
+  renderBar(el.querySelector('[data-bar]'), {
+    screen: 'refs',
+    state: st,
+    placeholder: 'Chercher une bouteille, une marque, un fournisseur…',
+    sortOptions: SORT_OPTIONS,
+    groupLabel: 'Grouper par catégorie',
+    actions: [
+      { key: 'import', label: 'Importer un fichier' },
+      { key: 'export', label: 'Exporter' },
+    ],
+    views: true,
+    onChange: () => render(el),
+    onAction: (key) => {
+      if (key === 'export') {
+        // ce qui part dans le fichier est ce qui est à l'écran : tri, filtre et sélection
+        const etat = tableState(TABLE);
+        const visibles = st.view === 'table' && etat.selected.size
+          ? filtered.filter((r) => etat.selected.has(r.id))
+          : filtered;
+        exporter({
+          titre: 'Références',
+          fichier: 'references',
+          colonnes: ['Référence', 'Marque', 'Catégorie', 'Fournisseur', 'Degré', 'Volume cl',
+            'Stock', 'Valeur HT', 'Achat HT', 'Coût unitaire', 'Marge %', 'Prix conseillé', 'Créée le'],
+          lignes: visibles.map((r) => [
+            r.nom, r.marque, r.categorie_nom, r.fournisseur, r.abv, r.vol_cl,
+            r.stock, r.valeur, r.achat_ht, r.cout_dose, r.marge_reelle, r.prix, r.created_at.slice(0, 10),
+          ]),
+        });
+      } else if (key === 'import') {
+        const modal = openModal(`
+          <div class="modal-head">
+            <div class="serif-title">Importer un fichier</div>
+            <button class="modal-x" aria-label="Fermer">×</button>
+          </div>
+          <div data-import-card></div>`, { width: 480 });
+        mountImportCard(modal.querySelector('[data-import-card]'), { onApplied: () => render(el) });
+      }
+    },
+  });
 
-  el.querySelector('[data-q]').addEventListener('input', (e) => {
-    F.query = e.target.value;
-    render(el);
-  });
-  el.querySelector('[data-cat]').addEventListener('change', (e) => {
-    F.cat = e.target.value;
-    render(el);
-  });
-  el.querySelector('[data-export]').addEventListener('click', () => {
-    // ce qui part dans le fichier est ce qui est à l'écran : tri, filtre et sélection
-    const etat = tableState(TABLE);
-    const visibles = etat.selected.size
-      ? filtered.filter((r) => etat.selected.has(r.id))
-      : filtered;
-    exporter({
-      titre: 'Références',
-      fichier: 'references',
-      colonnes: ['Référence', 'Marque', 'Catégorie', 'Fournisseur', 'Degré', 'Volume cl',
-        'Stock', 'Valeur HT', 'Achat HT', 'Coût unitaire', 'Marge %', 'Prix conseillé', 'Créée le'],
-      lignes: visibles.map((r) => [
-        r.nom, r.marque, r.categorie_nom, r.fournisseur, r.abv, r.vol_cl,
-        r.stock, r.valeur, r.achat_ht, r.cout_dose, r.marge_reelle, r.prix, r.created_at.slice(0, 10),
-      ]),
+  const content = el.querySelector('[data-content]');
+  if (st.view === 'table') {
+    content.innerHTML = '<div class="panel" data-table data-section="registre"></div>';
+    const table = content.querySelector('[data-table]');
+    renderTable(table, spec);
+    bindTable(table, spec, () => render(el));
+    table.querySelectorAll('[data-del]').forEach((b) =>
+      b.addEventListener('click', async () => {
+        const r = rows.find((x) => x.id === Number(b.dataset.del));
+        const ok = await confirmModal({
+          title: `Supprimer ${r.nom} ?`,
+          body: 'La référence disparaît de la cave et des listes. Les fiches cocktails qui l’utilisent devront être corrigées.',
+        });
+        if (!ok) return;
+        await apiSend('DELETE', `/api/refs/${r.id}`);
+        await refresh();
+      })
+    );
+  } else {
+    content.innerHTML = '<div data-blocks data-section="registre"></div>';
+    renderBlocks(content.querySelector('[data-blocks]'), {
+      rows: filtered,
+      name: (r) => r.nom,
+      subtitle: (r) => [r.marque, r.fournisseur].filter(Boolean).join(' · '),
+      kpis: [
+        { label: 'Stock', value: fmtStock },
+        { label: 'Coût unitaire', value: (r) => eur(r.cout_dose) },
+        {
+          label: 'Prix conseillé',
+          value: (r) => (r.suivi ? eur(r.prix) : '—'),
+          tone: (r) => (r.suivi && r.marge_reelle < pr.min ? 'warn' : ''),
+        },
+      ],
+      sortB: st.sortB,
+      accessors: {},
+      group,
+      onClick: (r) => openFiche(r.id, { onClose: () => render(el) }),
+      empty: emptyNote,
     });
-  });
-  el.querySelector('[data-import]').addEventListener('click', () => {
-    const modal = openModal(`
-      <div class="modal-head">
-        <div class="serif-title">Importer un fichier</div>
-        <button class="modal-x" aria-label="Fermer">×</button>
-      </div>
-      <div data-import-card></div>`, { width: 480 });
-    mountImportCard(modal.querySelector('[data-import-card]'), { onApplied: () => render(el) });
-  });
-  table.querySelectorAll('[data-edit]').forEach((b) =>
-    b.addEventListener('click', () => {
-      openRefModal({ ref: rows.find((x) => x.id === Number(b.dataset.edit)) });
-    })
-  );
-  table.querySelectorAll('[data-del]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      const r = rows.find((x) => x.id === Number(b.dataset.del));
-      const ok = await confirmModal({
-        title: `Supprimer ${r.nom} ?`,
-        body: 'La référence disparaît de la cave et des listes. Les fiches cocktails qui l’utilisent devront être corrigées.',
-      });
-      if (!ok) return;
-      await apiSend('DELETE', `/api/refs/${r.id}`);
-      await refresh();
-    })
-  );
-  const focus = el.querySelector('[data-q]');
-  if (F.query) { focus.focus(); focus.setSelectionRange(focus.value.length, focus.value.length); }
+  }
+
+  const focus = el.querySelector('[data-vb-q]');
+  if (st.search) { focus.focus(); focus.setSelectionRange(focus.value.length, focus.value.length); }
 }

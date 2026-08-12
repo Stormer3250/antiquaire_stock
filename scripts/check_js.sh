@@ -17,7 +17,7 @@ while IFS= read -r f; do
 done < <(find "$tmp/js" -name '*.js')
 echo "syntaxe : $count modules"
 
-for m in sortable table; do
+for m in sortable table ui viewbar blocks; do
   node "$tmp/js/$m.js"
   echo "auto-vérification de $m.js : OK"
 done

@@ -4,6 +4,7 @@ import { apiGet, apiSend } from '../api.js';
 import { esc, eur, num, confirmModal } from '../ui.js';
 import { S, go, refresh } from '../app.js';
 import { sortState, applySort, sortHeader, bindSort } from '../sortable.js';
+import { barState, renderBar } from '../viewbar.js';
 
 const SORT = sortState('nom');
 
@@ -41,6 +42,14 @@ export async function render(el) {
     (await apiGet(`/api/stock?lieu=${lieuId}`)).refs.filter((r) => r.suivi), SORT
   );
   const session = (sessions[lieuId] ||= new Map());
+  const st = barState('inv');
+  // la recherche et le repli de groupe ne touchent que l'affichage : une référence
+  // masquée garde son entrée dans `session`, la synthèse compte sur `session`, pas sur
+  // les lignes visibles.
+  const q = st.search.toLowerCase();
+  const visibleRefs = refs.filter(
+    (r) => q === '' || `${r.nom} ${r.marque}`.toLowerCase().includes(q)
+  );
 
   const countedOf = (t) => t.fulls + (t.level ?? 0);
 
@@ -76,6 +85,33 @@ export async function render(el) {
     </div>`;
   }
 
+  // Rendu par blocs (comme table.js) : groupe éteint → une seule liste ; groupe allumé →
+  // un en-tête `.tgroup` par catégorie, groupe replié → ses lignes sautées (la session,
+  // elle, garde tout).
+  function rowsHtml() {
+    if (!st.group) return visibleRefs.map(rowHtml).join('');
+    // Une section par catégorie, à sa première apparition — pas par changement de valeur
+    // en scannant les lignes triées (sinon trier par une autre colonne éclaterait une
+    // même catégorie en plusieurs en-têtes). Même partition que table.js/blocks.js.
+    const membres = new Map();
+    visibleRefs.forEach((r) => {
+      const l = r.categorie_nom;
+      if (!membres.has(l)) membres.set(l, []);
+      membres.get(l).push(r);
+    });
+    const parts = [];
+    for (const [l, rows] of membres) {
+      parts.push(`
+    <div class="tgroup" data-group="${esc(l)}" style="grid-template-columns:1fr;">
+      <span class="tgroup-caret">${st.collapsed.has(l) ? '▸' : '▾'}</span>
+      ${esc(l)} <span class="tgroup-n">· ${rows.length}</span>
+    </div>`);
+      if (st.collapsed.has(l)) continue;
+      rows.forEach((r) => parts.push(rowHtml(r)));
+    }
+    return parts.join('');
+  }
+
   function summaryHtml() {
     const s = summary();
     return `
@@ -94,6 +130,7 @@ export async function render(el) {
   }
 
   el.innerHTML = `
+  <div data-bar></div>
   <div style="display:grid; grid-template-columns:1fr 300px; gap:18px; align-items:start;">
     <div class="panel" data-section="comptage">
       <div class="thead" style="grid-template-columns:2fr 1.6fr .8fr .8fr;">
@@ -102,17 +139,35 @@ export async function render(el) {
         ${sortHeader('Théorique', 'stock', SORT, { align: 'r' })}
         <div class="r">Compté</div>
       </div>
-      <div data-rows>${refs.map(rowHtml).join('')}</div>
+      <div data-rows>${rowsHtml()}</div>
     </div>
-    <div class="card-ok" style="padding:20px; display:flex; flex-direction:column; gap:14px; position:sticky; top:90px;" data-summary>
+    <div class="card-ok" style="padding:20px; display:flex; flex-direction:column; gap:14px; position:sticky; top:calc(var(--vbar-h) - 26px);" data-summary>
       ${summaryHtml()}
     </div>
   </div>`;
+
+  renderBar(el.querySelector('[data-bar]'), {
+    screen: 'inv',
+    state: st,
+    placeholder: 'Chercher une référence, une marque…',
+    groupLabel: 'Grouper par catégorie',
+    views: false,
+    onChange: () => render(el),
+  });
 
   bindSort(el, SORT, () => render(el));
 
   const rowsEl = el.querySelector('[data-rows]');
   const summaryEl = el.querySelector('[data-summary]');
+
+  rowsEl.querySelectorAll('[data-group]').forEach((h) =>
+    h.addEventListener('click', () => {
+      const label = h.dataset.group;
+      if (st.collapsed.has(label)) st.collapsed.delete(label);
+      else st.collapsed.add(label);
+      render(el);
+    })
+  );
 
   function touch(refId) {
     if (!session.has(refId)) {
@@ -182,4 +237,7 @@ export async function render(el) {
 
   rowsEl.querySelectorAll('[data-row]').forEach(bindRow);
   bindClose();
+
+  const focus = el.querySelector('[data-vb-q]');
+  if (st.search) { focus.focus(); focus.setSelectionRange(focus.value.length, focus.value.length); }
 }

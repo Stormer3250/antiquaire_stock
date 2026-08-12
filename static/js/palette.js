@@ -4,10 +4,11 @@
 import { apiGet, apiSend } from './api.js';
 import { esc, closeModal, setEscape } from './ui.js';
 import { normalise } from './select.js';
-import { go } from './app.js';
+import { go, refresh } from './app.js';
 import { claim, release } from './overlay.js';
 import { openReception } from './reception.js';
 import { openRefModal } from './refmodal.js';
+import { openFiche } from './fiche.js';
 
 const ECRANS = [
   ['dash', 'Comptoir'],
@@ -16,8 +17,7 @@ const ECRANS = [
   ['cocktails', 'Recettes'],
   ['menus', 'Cartes & tarifications'],
   ['cave', 'Cave & seuils'],
-  ['bareme', 'Barème fiscal'],
-  ['config', 'Configuration'],
+  ['params', 'Paramètres'],
 ];
 
 let open = false;
@@ -75,7 +75,7 @@ async function collect() {
       kind: 'Référence',
       label: r.nom,
       hint: [r.marque, r.categorie_nom].filter(Boolean).join(' · '),
-      run: () => (r.suivi ? go(`#/product/${r.id}`) : openRefModal({ ref: r })),
+      run: () => openFiche(r.id, { onClose: refresh }),
     })
   );
   cocktails.cocktails.forEach((c) =>

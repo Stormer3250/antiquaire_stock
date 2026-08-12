@@ -15,7 +15,7 @@ const STORE = new Map();
 
 export function tableState(id, defaultSortKey = null, defaultDir = 'asc') {
   if (!STORE.has(id)) {
-    STORE.set(id, { sort: { key: defaultSortKey, dir: defaultDir }, selected: new Set() });
+    STORE.set(id, { sort: { key: defaultSortKey, dir: defaultDir }, selected: new Set(), collapsed: new Set() });
   }
   return STORE.get(id);
 }
@@ -36,13 +36,35 @@ function cellHtml(col, row) {
   return `<div class="${col.align || ''}">${esc(v ?? '')}</div>`;
 }
 
+function rowHtml(r, spec, grid, state) {
+  return `
+      <div class="trow ${spec.rowClass ? spec.rowClass(r) : ''} ${state.selected.has(r.id) ? 'picked' : ''}"
+        style="grid-template-columns:${grid};" data-row="${r.id}">
+        ${spec.select ? `<label class="tick"><input type="checkbox" data-tick="${r.id}"
+          ${state.selected.has(r.id) ? 'checked' : ''} aria-label="Cocher cette ligne"></label>` : ''}
+        ${spec.columns.map((c) => cellHtml(c, r)).join('')}
+      </div>`;
+}
+
 /**
- * spec : { id, columns, rows, grid, select, summary, empty, foot, rowClass, onRowClick }
+ * Partition pure : quelles lignes de `rows` restent affichées une fois les groupes
+ * repliés (via `collapsed`, un Set de labels) retirés. `group` absent/éteint → tout passe.
+ */
+export function visibleRows(rows, group, collapsed) {
+  if (!group?.on) return rows;
+  return rows.filter((r) => !collapsed.has(group.label(r)));
+}
+
+/**
+ * spec : { id, columns, rows, grid, select, summary, empty, foot, rowClass, onRowClick, group }
  * - columns : [{ key, label, align, sortable, cell(row) }]
  * - grid    : la valeur de grid-template-columns SANS la colonne de sélection
  * - select  : true pour la colonne à cocher et la barre de synthèse
  * - summary : (lignesCochees, toutesLignes) => HTML de la barre
- * Renvoie les lignes effectivement affichées, dans l'ordre affiché.
+ * - group   : { on, label(row), collapsed? } optionnel — sections repliables, voir
+ *             `visibleRows` ; `collapsed` par défaut au Set interne de la table, mais un
+ *             écran peut passer le sien pour le partager avec une autre vue (ex. blocs)
+ * Renvoie les lignes effectivement affichées (triées, sélection/résumé), groupe replié ou non.
  */
 export function renderTable(el, spec) {
   const state = tableState(spec.id, spec.defaultSort);
@@ -56,6 +78,8 @@ export function renderTable(el, spec) {
   });
 
   const grid = spec.select ? `34px ${spec.grid}` : spec.grid;
+  // Tout cocher porte sur toutes les lignes filtrées, groupe replié ou pas : replier
+  // n'est pas décocher.
   const allOn = rows.length > 0 && rows.every((r) => state.selected.has(r.id));
 
   const head = `
@@ -65,15 +89,38 @@ export function renderTable(el, spec) {
       ${spec.columns.map((c) => headCell(c, state)).join('')}
     </div>`;
 
-  const body = rows.length === 0
-    ? (spec.empty || '<div class="empty-note">Rien à afficher.</div>')
-    : rows.map((r) => `
-      <div class="trow ${spec.rowClass ? spec.rowClass(r) : ''} ${state.selected.has(r.id) ? 'picked' : ''}"
-        style="grid-template-columns:${grid};" data-row="${r.id}">
-        ${spec.select ? `<label class="tick"><input type="checkbox" data-tick="${r.id}"
-          ${state.selected.has(r.id) ? 'checked' : ''} aria-label="Cocher cette ligne"></label>` : ''}
-        ${spec.columns.map((c) => cellHtml(c, r)).join('')}
-      </div>`).join('');
+  // `spec.group.collapsed` permet à un écran de partager le même Set de sections
+  // repliées entre sa table et sa vue en blocs ; à défaut, la table garde le sien.
+  const collapsed = spec.group?.collapsed || state.collapsed;
+
+  let body;
+  if (rows.length === 0) {
+    body = spec.empty || '<div class="empty-note">Rien à afficher.</div>';
+  } else if (spec.group?.on) {
+    const label = spec.group.label;
+    // Une section par label, à sa première apparition dans l'ordre trié — pas une
+    // section par changement de valeur : trier par une autre colonne que le groupe ne
+    // doit pas éclater un même label en plusieurs en-têtes (même partition que blocks.js).
+    const membres = new Map();
+    rows.forEach((r) => {
+      const l = label(r);
+      if (!membres.has(l)) membres.set(l, []);
+      membres.get(l).push(r);
+    });
+    const parts = [];
+    for (const [l, mrows] of membres) {
+      parts.push(`
+    <div class="tgroup" data-group="${esc(l)}" style="grid-template-columns:1fr;">
+      <span class="tgroup-caret">${collapsed.has(l) ? '▸' : '▾'}</span>
+      ${esc(l)} <span class="tgroup-n">· ${mrows.length}</span>
+    </div>`);
+      if (collapsed.has(l)) continue;
+      mrows.forEach((r) => parts.push(rowHtml(r, spec, grid, state)));
+    }
+    body = parts.join('');
+  } else {
+    body = rows.map((r) => rowHtml(r, spec, grid, state)).join('');
+  }
 
   // La synthèse est posée AVANT l'en-tête : ce que l'on vient de cocher se lit tout de
   // suite, sans descendre au bas d'une table de trois cents lignes.
@@ -106,6 +153,21 @@ function paintSummary(el, spec, rows, state) {
 export function bindTable(el, spec, rerender) {
   const state = tableState(spec.id, spec.defaultSort);
   const rows = applySort(spec.rows, state.sort, spec.accessors);
+  const collapsed = spec.group?.collapsed || state.collapsed;
+  // Le même ensemble que celui peint par renderTable, pour que les data-row du DOM
+  // retrouvent toujours leur ligne (les groupes repliés n'ont pas de nœud).
+  const vis = visibleRows(rows, spec.group, collapsed);
+
+  if (spec.group?.on) {
+    el.querySelectorAll('[data-group]').forEach((h) =>
+      h.addEventListener('click', () => {
+        const label = h.dataset.group;
+        if (collapsed.has(label)) collapsed.delete(label);
+        else collapsed.add(label);
+        rerender();
+      })
+    );
+  }
 
   el.querySelectorAll('[data-sort]').forEach((h) => {
     const go = () => {
@@ -153,7 +215,7 @@ export function bindTable(el, spec, rerender) {
     el.querySelectorAll('[data-row]').forEach((node) =>
       node.addEventListener('click', (e) => {
         if (e.target.closest('.tick, button, input, select, .cc-sel')) return;
-        const row = rows.find((r) => r.id === Number(node.dataset.row));
+        const row = vis.find((r) => r.id === Number(node.dataset.row));
         if (row) spec.onRowClick(row);
       })
     );
@@ -192,6 +254,36 @@ function demo() {
   assert(cellHtml({ key: 'nom' }, { nom: '<b>x</b>' }).includes('&lt;b&gt;'), 'échappement par défaut');
   assert(cellHtml({ key: 'nom', cell: (r) => `<i>${r.nom}</i>` }, { nom: 'y' }) === '<i>y</i>',
     'cellule sur mesure');
+
+  // groupement : partition stable, groupes repliés exclus du rendu
+  const st = tableState('g', 'nom');
+  st.collapsed.add('Rhums');
+  const all = [{ id: 1, cat: 'Gins' }, { id: 2, cat: 'Rhums' }, { id: 3, cat: 'Gins' }];
+  const vis = visibleRows(all, { on: true, label: (r) => r.cat }, st.collapsed);
+  assert(vis.map((r) => r.id).join(',') === '1,3', 'les lignes d’un groupe replié disparaissent');
+  assert(visibleRows(all, { on: false }, st.collapsed).length === 3, 'groupement éteint : tout passe');
+
+  // tri par une colonne hors-groupe : le label du groupe n'est alors plus contigu dans
+  // les lignes triées (A=Gins, B=Rhums, C=Gins → Gins apparaît deux fois, séparé par
+  // Rhums). Doit rester UNE seule section « Gins » (partition par Map à la première
+  // apparition, pas par changement de valeur en scannant les lignes triées).
+  const div = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
+  const spec = {
+    id: 'coalesce',
+    columns: [{ key: 'nom' }],
+    rows: [
+      { id: 1, nom: 'A', cat: 'Gins' },
+      { id: 2, nom: 'B', cat: 'Rhums' },
+      { id: 3, nom: 'C', cat: 'Gins' },
+    ],
+    grid: '1fr',
+    group: { on: true, label: (r) => r.cat },
+    defaultSort: 'nom',
+  };
+  renderTable(div, spec);
+  const nGroups = (div.innerHTML.match(/class="tgroup"/g) || []).length;
+  assert(nGroups === 2, `une section par label malgré le tri qui les entrelace (trouvé ${nGroups})`);
+  assert(/Gins[\s\S]*Rhums[\s\S]*Gins/.test(div.innerHTML) === false, 'Gins ne réapparaît pas après Rhums');
 }
 
 if (typeof process !== 'undefined' && /table\.m?js$/.test(process.argv?.[1] || '')) demo();

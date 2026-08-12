@@ -43,7 +43,7 @@ input[type=range] { accent-color: var(--ac); }
 
 /* ---------- structure ---------- */
 
-.app { display: flex; min-height: 100vh; }
+.app { display: flex; height: 100vh; }
 
 .side {
   width: 64px; flex: 0 0 64px;
@@ -105,7 +105,7 @@ body.nav-epinglee .pin .ic { transform: rotate(180deg); }
 }
 .side-foot-line { font-size: 13px; color: var(--mut); }
 
-.main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .topbar {
   display: flex; align-items: center; gap: 14px; padding: 16px 30px;
   border-bottom: 1px solid var(--line); background: var(--head);
@@ -126,7 +126,10 @@ body.nav-epinglee .pin .ic { transform: rotate(180deg); }
   font-family: var(--mono); font-size: 11px; color: var(--ac);
 }
 .user-name { font-size: 12.5px; color: var(--mut); }
-.screen { flex: 1; overflow: auto; padding: 26px 30px 46px; }
+/* --vbar-h : hauteur réelle de la barre gelée une fois figée, pour que tout ce qui doit
+   coller EN DESSOUS d'elle (ex. .table-summary) parte du bon décalage plutôt que d'un
+   nouveau nombre magique. */
+.screen { flex: 1; overflow: auto; padding: 26px 30px 46px; --vbar-h: 60px; }
 
 /* ---------- typographie utilitaire ---------- */
 
@@ -235,6 +238,13 @@ select.input option { background: var(--input); color: var(--ink); }
   border-bottom: 1px solid var(--line2);
 }
 .trow:hover { background: #201A17; }
+.tgroup { display: grid; align-items: center; padding: 9px 20px; gap: 8px;
+  background: var(--panel2); border-bottom: 1px solid var(--line);
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--mut2); cursor: pointer; user-select: none; }
+.tgroup:hover { color: var(--ink); }
+.tgroup-caret { display: inline-block; width: 12px; color: var(--ac); }
+.tgroup-n { color: var(--mut3); letter-spacing: 0; }
 .cell-main { min-width: 0; }
 .cell-main .nom {
   font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -251,6 +261,25 @@ select.input option { background: var(--input); color: var(--ink); }
   background: var(--red2); padding: 3px 7px; justify-self: end;
 }
 .empty-note { padding: 26px 20px; font-size: 13px; color: var(--mut2); text-wrap: pretty; }
+
+/* ---------- vue en blocs ---------- */
+
+.blocs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px; padding: 14px 0; }
+.bloc { display: flex; flex-direction: column; gap: 6px; text-align: left;
+  height: 148px; padding: 16px 18px; background: var(--panel);
+  border: 1px solid var(--line); cursor: pointer; font-family: var(--sans); color: var(--ink); }
+.bloc:hover { border-color: var(--line3); background: var(--panel2); }
+.bloc-nom { font-family: var(--serif); font-size: 18px; line-height: 1.15;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bloc-sub { font-size: 12px; color: var(--mut3); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.bloc-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line2); }
+.bloc-kpi .mono-label { font-size: 8.5px; color: var(--mut3); }
+.kpi-val { font-family: var(--mono); font-size: 13px; margin-top: 3px; }
+.kpi-val.ok { color: var(--ok-ink); }
+.kpi-val.warn { color: var(--red2); }
 
 .bar-track { height: 5px; background: #241D19; }
 .bar-fill { height: 5px; background: var(--ac); }
@@ -322,6 +351,34 @@ select.input option { background: var(--input); color: var(--ink); }
 }
 .modal-hint { font-size: 12.5px; color: var(--mut3); max-width: 36ch; text-wrap: pretty; }
 .confirm { width: 420px; border-color: var(--warn-line); }
+
+/* Fiche : en-tête et pied figés, seul le corps défile. */
+.modal.fiche {
+  max-width: calc(100vw - 96px); max-height: calc(100vh - 80px);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.modal.fiche > [data-fiche] { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.fiche-head {
+  display: flex; align-items: center; gap: 24px; flex: 0 0 auto;
+  padding: 15px 22px; border-bottom: 1px solid var(--line);
+}
+.fiche-titre { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.fiche-nom { font-family: var(--serif); font-size: 21px; padding: 7px 10px; }
+.fiche-kpis { flex: 0 0 auto; width: 340px; margin-top: 0; padding-top: 0; border-top: 0; }
+.fiche-corps { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.fiche-deux {
+  display: grid; grid-template-columns: 1fr 1.15fr; gap: 16px;
+  padding: 0 22px 20px; align-items: start;
+}
+/* Recette : la composition (ingrédients) a besoin de plus de large que la tarification,
+   contrairement aux autres fiches (fiche.js) qui restent sur le 1fr/1.15fr par défaut. */
+.fiche-deux.fiche-deux-recette { grid-template-columns: 1.35fr 1fr; }
+.modal.fiche .modal-foot { flex: 0 0 auto; }
+.modal-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); flex: 0 0 auto; }
+.modal-tabs button { padding: 11px 18px; background: transparent; border: none;
+  border-bottom: 2px solid transparent; color: var(--mut2); font-family: var(--mono);
+  font-size: 11px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.modal-tabs button.active { color: var(--ink); border-bottom-color: var(--ac); }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field .mono-label { font-size: 9px; letter-spacing: .14em; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -348,6 +405,18 @@ select.input option { background: var(--input); color: var(--ink); }
 .grow { flex: 1; min-width: 0; }
 .stack { display: flex; flex-direction: column; gap: 16px; }
 
+/* ---------- barre gelée commune (viewbar) ---------- */
+
+/* `top` négatif = exactement le padding-top de `.screen` (26px) : le seuil de collage se
+   compte depuis le bord intérieur (padding compris) de `.screen`, donc sans ce décalage la
+   barre se fige 26px trop bas, sous un interstice visible pendant le défilement. */
+.vbar { position: sticky; top: -26px; z-index: 5; display: flex; gap: 10px;
+  align-items: center; padding: 10px 0 14px; background: var(--bg); }
+.vb-views { display: flex; border: 1px solid var(--line3); }
+.vb-views button { width: 34px; height: 34px; display: grid; place-items: center;
+  background: transparent; border: none; color: var(--mut3); cursor: pointer; }
+.vb-views button.active { background: var(--panel2); color: var(--ac); }
+
 /* pied de barre latérale : quelle version tourne ici */
 .build-stamp {
   margin-top: 10px;
@@ -369,15 +438,6 @@ select.input option { background: var(--input); color: var(--ink); }
 .th-arrow { font-size: 9px; opacity: .9; }
 .created-at { font-size: 10.5px; color: var(--mut3); white-space: nowrap; }
 .row-actions { align-items: center; }
-
-/* puces de tri de la colonne des fiches */
-.chip-sort {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
-  padding: 4px 8px; background: transparent; color: var(--mut3);
-  border: 1px solid var(--line2); cursor: pointer;
-}
-.chip-sort:hover { color: var(--ink); border-color: var(--line); }
-.chip-sort.active { color: var(--ac); border-color: var(--ac); }
 
 /* ---------- sélecteurs maison ---------- */
 .cc-sel { position: relative; width: 100%; }
@@ -468,9 +528,19 @@ select.input option { background: var(--input); color: var(--ink); }
 /* ---------- sélection de lignes et barre de synthèse ---------- */
 .tick { display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .tick input { accent-color: var(--ac); cursor: pointer; }
+
+/* Les cases à cocher apparaissent au survol d'une ligne ou dès qu'une ligne est sélectionnée */
+.trow .tick input { opacity: 0; transition: opacity .1s; }
+.trow:hover .tick input,
+.trow.picked .tick input,
+.panel:has(.trow.picked) .trow .tick input,
+.thead .tick input { opacity: 1; }
+
 .trow.picked { background: var(--panel2); box-shadow: inset 2px 0 0 var(--ac); }
 .table-summary {
-  position: sticky; top: 0; z-index: 6;
+  /* Colle juste sous .vbar (même repère « -26px » qu'elle, plus sa hauteur) : sans ce
+     décalage, la synthèse remonte par-dessus la barre de recherche au défilement. */
+  position: sticky; top: calc(var(--vbar-h) - 26px); z-index: 6;
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
   padding: 12px 20px; background: var(--panel2); border-bottom: 1px solid var(--ac);
 }
@@ -548,3 +618,20 @@ select.input option { background: var(--input); color: var(--ink); }
   border: 1px solid var(--line); color: var(--mut2);
 }
 .chip-carte.premiere { border-color: var(--ac); color: var(--ac); }
+
+/* ---------- Paramètres : sous-navigation et barre de brouillon ---------- */
+.params-nav { padding: 6px 0; position: sticky; top: 0; }
+.params-nav button {
+  display: block; width: 100%; text-align: left; padding: 10px 14px;
+  background: transparent; border: none; border-left: 2px solid transparent;
+  color: var(--mut); font-family: var(--sans); font-size: 13px; cursor: pointer;
+}
+.params-nav button:hover { color: var(--ink); }
+.params-nav button.active {
+  color: var(--ink); border-left-color: var(--ac); background: var(--panel2);
+}
+.draft-bar {
+  position: sticky; top: 0; z-index: 6; display: flex; align-items: center;
+  justify-content: space-between; gap: 12px; padding: 11px 16px; margin-bottom: 14px;
+  background: var(--panel2); border: 1px solid var(--ac); font-size: 13px;
+}
