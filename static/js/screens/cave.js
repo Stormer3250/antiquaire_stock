@@ -2,12 +2,13 @@
 
 import { apiGet, apiSend } from '../api.js';
 import { icone } from '../icons.js';
-import { esc, eur, num, parseNum, confirmModal } from '../ui.js';
+import { esc, eur, num, parseNum, confirmModal, openModal } from '../ui.js';
 import { S, refresh, lieuQuery, fmtStock } from '../app.js';
 import { openRefModal } from '../refmodal.js';
 import { openFiche } from '../fiche.js';
 import { mountImportCard } from '../importcard.js';
 import { renderTable, bindTable, tableState } from '../table.js';
+import { barState, renderBar } from '../viewbar.js';
 import { openBulkModal } from '../bulkmodal.js';
 
 const T_SUIVIES = 'cave-suivies';
@@ -16,14 +17,28 @@ const T_GARNITURES = 'cave-garnitures';
 const GRID = '2fr .7fr 1fr 1fr 1fr .8fr .8fr 66px';
 const UGRID = '2fr 1fr 1fr 1fr 66px';
 
+function historiqueHtml(imports) {
+  return imports.length === 0
+    ? '<div style="font-size:12.5px; color:var(--mut3);">Aucun import pour l’instant.</div>'
+    : imports.slice(0, 6).map((h) => `
+    <div class="row spread" style="gap:10px;">
+      <div style="font-size:12.5px; color:var(--mut); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(h.filename)}</div>
+      <div class="num" style="font-size:11.5px; color:var(--mut3); flex:0 0 auto;">
+        ${esc(h.created_at.slice(0, 10))} · ${h.line_count} lignes</div>
+    </div>`).join('');
+}
+
 export async function render(el) {
-  const [stockData, importsData] = await Promise.all([
-    apiGet(`/api/stock?lieu=${lieuQuery()}`),
-    apiGet('/api/imports'),
-  ]);
+  const st = barState('cave');
+  const stockData = await apiGet(`/api/stock?lieu=${lieuQuery()}`);
   const tracked = stockData.refs.filter((r) => r.suivi);
   const untracked = stockData.refs.filter((r) => !r.suivi && r.categorie_nom !== 'Consommable');
   const low = tracked.filter((r) => r.low).length;
+
+  const q = st.search.toLowerCase();
+  const matches = (r) => q === '' || `${r.nom} ${r.marque} ${r.fournisseur}`.toLowerCase().includes(q);
+  const trackedVisible = tracked.filter(matches);
+  const untrackedVisible = untracked.filter(matches);
 
   const patchRef = async (id, body) => {
     await apiSend('PATCH', `/api/refs/${id}`, body);
@@ -35,7 +50,9 @@ export async function render(el) {
     defaultSort: 'nom',
     grid: GRID,
     select: true,
-    rows: tracked,
+    rows: trackedVisible,
+    universe: tracked,   // une ligne masquée par la recherche reste cochée, une ligne supprimée non
+    group: { on: st.group, label: (r) => r.categorie_nom, collapsed: st.collapsed },
     columns: [
       {
         key: 'nom',
@@ -110,7 +127,7 @@ export async function render(el) {
     defaultSort: 'nom',
     grid: UGRID,
     select: true,
-    rows: untracked,
+    rows: untrackedVisible,
     columns: [
       {
         key: 'nom',
@@ -149,44 +166,55 @@ export async function render(el) {
   };
 
   el.innerHTML = `
-  <div style="display:grid; grid-template-columns:1fr 320px; gap:18px; align-items:start;">
-    <div class="stack" style="gap:18px;">
-      <div class="panel">
-        <div class="panel-head">
-          <div class="serif-title">Maintien du stock</div>
-          <div style="font-size:12.5px; color:var(--mut3);">Seuil d’alerte, stock cible, prix d’achat et marge</div>
-        </div>
-        <div data-suivies data-section="seuils"></div>
+  <div data-bar></div>
+  <div class="stack" style="gap:18px;">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="serif-title">Maintien du stock</div>
+        <div style="font-size:12.5px; color:var(--mut3);">Seuil d’alerte, stock cible, prix d’achat et marge</div>
       </div>
-
-      <div class="panel">
-        <div class="panel-head">
-          <div class="serif-title">Références non suivies</div>
-          <button class="btn" data-new-untracked>+ Garniture</button>
-        </div>
-        <div data-garnitures data-section="garnitures"></div>
-      </div>
+      <div data-suivies data-section="seuils"></div>
     </div>
 
-    <div class="stack" style="gap:14px;">
-      <div class="panel" data-section="import">
-        <div style="padding:15px 18px; border-bottom:1px solid var(--line);" class="serif-title">
-          Mise à jour par fichier</div>
-        <div data-import-card></div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="serif-title">Références non suivies</div>
       </div>
-      <div class="panel" style="padding:18px; display:flex; flex-direction:column; gap:10px;">
-        <div class="mono-label" style="color:var(--mut2);">Historique des imports</div>
-        ${importsData.imports.length === 0
-          ? '<div style="font-size:12.5px; color:var(--mut3);">Aucun import pour l’instant.</div>'
-          : importsData.imports.slice(0, 6).map((h) => `
-          <div class="row spread" style="gap:10px;">
-            <div style="font-size:12.5px; color:var(--mut); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(h.filename)}</div>
-            <div class="num" style="font-size:11.5px; color:var(--mut3); flex:0 0 auto;">
-              ${esc(h.created_at.slice(0, 10))} · ${h.line_count} lignes</div>
-          </div>`).join('')}
-      </div>
+      <div data-garnitures data-section="garnitures"></div>
     </div>
   </div>`;
+
+  renderBar(el.querySelector('[data-bar]'), {
+    screen: 'cave',
+    state: st,
+    placeholder: 'Chercher une référence, une marque, un fournisseur…',
+    groupLabel: 'Grouper par catégorie',
+    actions: [
+      { key: 'import', label: 'Importer un fichier' },
+      { key: 'garniture', label: '+ Garniture' },
+    ],
+    views: false,
+    onChange: () => render(el),
+    onAction: async (key) => {
+      if (key === 'garniture') {
+        openRefModal({ suivi: false });
+      } else if (key === 'import') {
+        const modal = openModal(`
+          <div class="modal-head">
+            <div class="serif-title">Importer un fichier</div>
+            <button class="modal-x" aria-label="Fermer">×</button>
+          </div>
+          <div data-import-card></div>
+          <div style="padding:15px 18px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:10px;">
+            <div class="mono-label" style="color:var(--mut2);">Historique des imports</div>
+            <div data-import-history></div>
+          </div>`, { width: 480 });
+        mountImportCard(modal.querySelector('[data-import-card]'), { onApplied: () => render(el) });
+        const importsData = await apiGet('/api/imports');
+        modal.querySelector('[data-import-history]').innerHTML = historiqueHtml(importsData.imports);
+      }
+    },
+  });
 
   // ---------- liaisons table ----------
 
@@ -245,11 +273,6 @@ export async function render(el) {
       await refresh();
     })
   );
-  el.querySelector('[data-new-untracked]').addEventListener('click', () =>
-    openRefModal({ suivi: false })
-  );
-
-  // ---------- carte import (module partagé) ----------
-
-  mountImportCard(el.querySelector('[data-import-card]'), { onApplied: () => render(el) });
+  const focus = el.querySelector('[data-vb-q]');
+  if (st.search) { focus.focus(); focus.setSelectionRange(focus.value.length, focus.value.length); }
 }

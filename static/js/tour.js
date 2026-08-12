@@ -56,8 +56,8 @@ const STEPS = {
       'Le seuil déclenche l’alerte, la cible est le stock à reconstituer : la commande suggérée vaut cible moins stock.'],
     ['[data-section="garnitures"]', 'Les garnitures',
       'Ni stock, ni seuil, ni inventaire : zestes, sirops et aromates servent uniquement à chiffrer les recettes, au coût unitaire que vous leur donnez.'],
-    ['[data-section="import"]', 'Import de fichier',
-      'Un .xlsx ou .csv, déposé ou choisi. Les colonnes se mappent à l’écran, et un fichier à deux colonnes « nom, prix d’achat » suffit à mettre à jour les tarifs.'],
+    ['[data-vb-act="import"]', 'Import de fichier',
+      'Un .xlsx ou .csv, déposé ou choisi. Les colonnes se mappent à l’écran, et un fichier à deux colonnes « nom, prix d’achat » suffit à mettre à jour les tarifs. L’historique des imports vit dans la même fenêtre.'],
   ],
   bareme: [
     ['[data-section="taux"]', 'Les taux',
