@@ -13,7 +13,7 @@ const SORT_OPTIONS = [
   ['nom', 'Nom'], ['cost', 'Coût'], ['prix_ttc', 'Prix'], ['marge', 'Marge'], ['created_at', 'Créée le'],
 ];
 
-const GRID = '2fr .9fr .8fr .8fr .8fr 40px';
+const GRID = '2fr .9fr .8fr .8fr .8fr';
 
 export async function render(el) {
   const st = barState('cocktails');
@@ -73,18 +73,20 @@ export async function render(el) {
   // Ce que l'on veut savoir d'un paquet de recettes : ce qu'il rapporte et à quel point
   // ses prix sont dispersés.
   const summary = (picked, _rows, masquees) => {
-    const moy = (f) => picked.reduce((a, x) => a + f(x), 0) / picked.length;
+    // aucune ligne cochée visible (tout masqué par la recherche) : pas de moyenne à
+    // calculer, sinon division par zéro / min-max de tableau vide (±Infinity)
+    const moy = (f) => (picked.length ? picked.reduce((a, x) => a + f(x), 0) / picked.length : null);
     const prix = picked.map((x) => x.prix_ttc);
-    const bas = Math.min(...prix);
-    const haut = Math.max(...prix);
+    const bas = picked.length ? Math.min(...prix) : null;
+    const haut = picked.length ? Math.max(...prix) : null;
     return `
       <div class="sum-figs">
         <span class="sum-count">${picked.length} recette${picked.length > 1 ? 's' : ''} retenue${picked.length > 1 ? 's' : ''}</span>
         ${masquees ? `<span class="sum-hidden">+ ${masquees} hors filtre, non touchée${masquees > 1 ? 's' : ''}</span>` : ''}
-        <span>Marge moyenne <b class="num">${pc(moy((x) => x.marge))}</b></span>
-        <span>Prix moyen <b class="num">${eur(moy((x) => x.prix_ttc))}</b></span>
-        <span>Coût matière moyen <b class="num">${eur(moy((x) => x.cost))}</b></span>
-        <span>De <b class="num">${eur(bas)}</b> à <b class="num">${eur(haut)}</b>, écart <b class="num">${eur(haut - bas)}</b></span>
+        <span>Marge moyenne <b class="num">${moy((x) => x.marge) === null ? '—' : pc(moy((x) => x.marge))}</b></span>
+        <span>Prix moyen <b class="num">${moy((x) => x.prix_ttc) === null ? '—' : eur(moy((x) => x.prix_ttc))}</b></span>
+        <span>Coût matière moyen <b class="num">${moy((x) => x.cost) === null ? '—' : eur(moy((x) => x.cost))}</b></span>
+        <span>De <b class="num">${bas === null ? '—' : eur(bas)}</b> à <b class="num">${haut === null ? '—' : eur(haut)}</b>, écart <b class="num">${bas === null ? '—' : eur(haut - bas)}</b></span>
       </div>
       <div class="row" style="gap:8px;">
         <button class="btn muted" data-unpick>Tout décocher</button>
