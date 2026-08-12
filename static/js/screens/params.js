@@ -92,6 +92,19 @@ function setScalaire(bucket, key, value, courant) {
   peindreBarre();
 }
 
+// Champs numériques du brouillon (politique de prix, taux). Un champ VIDÉ retire sa clé :
+// sans ça, effacer la case laissait dans le brouillon la dernière frappe d'avant
+// l'effacement, et « Enregistrer » écrivait un chiffre que personne n'avait voulu.
+function lierNombre(inp, bucket, key, courant) {
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
+  inp.addEventListener('input', () => {
+    if (inp.value.trim() === '') { delete bucket[key]; peindreBarre(); return; }
+    const v = parseNum(inp.value);
+    if (v <= 0) return;
+    setScalaire(bucket, key, v, courant);
+  });
+}
+
 // ---------- panneaux ----------
 
 const PANES = {
@@ -179,7 +192,10 @@ async function enregistrer() {
   }
   await reloadMeta();     // reloadMeta rejoue setPctDecimales : les % suivent le réglage
   clearDraft();
-  await render(host);
+  // refresh() et non render() : la marge cible s'affiche aussi dans l'en-tête, qui n'est
+  // repeint que par renderShell(). Le brouillon est déjà vidé, la question de sortie ne
+  // peut donc pas se déclencher.
+  await refresh();
 }
 
 // ---------- 1. politique de prix ----------
@@ -221,14 +237,9 @@ async function panePrix(zone) {
         une ou deux servent quand les marges se jouent au dixième de point.</span></div>
     </div>`;
 
-  zone.querySelectorAll('[data-pricing]').forEach((inp) => {
-    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
-    inp.addEventListener('input', () => {
-      const v = parseNum(inp.value);
-      if (v <= 0) return;
-      setScalaire(draft.pricing, inp.dataset.pricing, v, S.meta.pricing[inp.dataset.pricing]);
-    });
-  });
+  zone.querySelectorAll('[data-pricing]').forEach((inp) =>
+    lierNombre(inp, draft.pricing, inp.dataset.pricing, S.meta.pricing[inp.dataset.pricing])
+  );
   zone.querySelector('[data-pct-decimales]').addEventListener('change', (e) => {
     const v = Number(e.target.value);
     setScalaire(draft.pricing, 'pct_decimales', v, S.meta.pricing.pct_decimales ?? 0);
@@ -271,10 +282,14 @@ async function paneCategories(zone) {
   zone.querySelectorAll('[data-cat]').forEach((inp) => {
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
     inp.addEventListener(inp.tagName === 'SELECT' ? 'change' : 'input', () => {
-      const [id, key] = inp.dataset.cat.split(':');
+      const [sid, key] = inp.dataset.cat.split(':');
+      const id = Number(sid);
+      const c = S.meta.categories.find((x) => x.id === id);
+      // champ vidé : on repose la valeur enregistrée, ce qui retire la clé du brouillon
+      if (inp.value.trim() === '') { setCat(id, key, c[key]); return; }
       const v = NUMERIQUES.has(key) ? parseNum(inp.value) : inp.value.trim();
-      if (v === '' || (NUMERIQUES.has(key) && key !== 'marge_pct' && v <= 0)) return;
-      setCat(Number(id), key, v);
+      if (NUMERIQUES.has(key) && key !== 'marge_pct' && v <= 0) return;
+      setCat(id, key, v);
     });
   });
 
@@ -398,14 +413,9 @@ async function paneBareme(zone) {
       </div>
     </div>`;
 
-  zone.querySelectorAll('[data-rate]').forEach((inp) => {
-    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
-    inp.addEventListener('input', () => {
-      const v = parseNum(inp.value);
-      if (v <= 0) return;
-      setScalaire(draft.rates, inp.dataset.rate, v, S.meta.rates[inp.dataset.rate]);
-    });
-  });
+  zone.querySelectorAll('[data-rate]').forEach((inp) =>
+    lierNombre(inp, draft.rates, inp.dataset.rate, S.meta.rates[inp.dataset.rate])
+  );
 
   zone.querySelector('[data-nouveau-taux]').addEventListener('click', () => nouveauTaux());
   zone.querySelectorAll('[data-del-taux]').forEach((b) =>
@@ -570,10 +580,9 @@ async function paneReferentiels(zone) {
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
     inp.addEventListener('input', () => {
       const [key, i] = inp.dataset.listItem.split(':');
-      const v = inp.value.trim();
-      if (!v) return;
       const items = [...lv(key)];
-      items[Number(i)] = v;
+      // même règle que les autres champs : vidé, l'élément revient à ce qui est enregistré
+      items[Number(i)] = inp.value.trim() || S.meta.lists[key][Number(i)] || 'Nouveau';
       poserListe(key, items);
     });
   });
