@@ -503,6 +503,14 @@ select.input option { background: var(--input); color: var(--ink); }
 /* ---------- sélection de lignes et barre de synthèse ---------- */
 .tick { display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .tick input { accent-color: var(--ac); cursor: pointer; }
+
+/* Les cases à cocher apparaissent au survol d'une ligne ou dès qu'une ligne est sélectionnée */
+.trow .tick input { opacity: 0; transition: opacity .1s; }
+.trow:hover .tick input,
+.trow.picked .tick input,
+.panel:has(.trow.picked) .trow .tick input,
+.thead .tick input { opacity: 1; }
+
 .trow.picked { background: var(--panel2); box-shadow: inset 2px 0 0 var(--ac); }
 .table-summary {
   position: sticky; top: 0; z-index: 6;
