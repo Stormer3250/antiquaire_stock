@@ -12,6 +12,18 @@ const ANCIEN = 'antiquaire.vuVersion';  // clé de la toute première livraison
 const NOTES = [
   {
     date: '2026-08-12',
+    titre: 'Refonte des écrans : blocs, fiches en modale et barre commune',
+    lignes: [
+      'Chaque écran de liste propose désormais deux vues, blocs ou tableau, avec les mêmes groupes des deux côtés.',
+      'Une barre commune porte la recherche et le regroupement par catégorie sur tous ces écrans.',
+      'Références, recettes et cartes s’ouvrent en fiche, dans une modale plutôt qu’une page à part ; la fiche d’une carte a deux onglets (composition, tarification).',
+      'Importer la cave se fait désormais en modale, avec l’historique des imports sous la main.',
+      'Paramètres et brouillon du barème sont réunis sur un seul écran.',
+      'Le nombre de décimales affiché sur les pourcentages se règle dans Paramètres.',
+    ],
+  },
+  {
+    date: '2026-08-12',
     titre: 'Vocabulaire, barre latérale et confort',
     lignes: [
       'Le vocabulaire est fixé : une RECETTE se chiffre, une CARTE regroupe des recettes, une TARIFICATION est une grille de prix posée sur une carte.',
