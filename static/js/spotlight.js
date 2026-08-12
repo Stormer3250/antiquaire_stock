@@ -55,11 +55,15 @@ export function amener(el) {
     const r = el.getBoundingClientRect();
     const dedans = r.top >= 60 && r.bottom <= window.innerHeight - 40;
     if (dedans) { resolve(); return; }
+    // C'est `#screen` (`.screen { overflow: auto }`) qui défile réellement, pas la
+    // fenêtre : scrollIntoView() agit dessus, donc c'est son scrollTop qu'il faut
+    // surveiller pour savoir quand le défilement est fini.
+    const conteneur = el.closest('.screen') || document.scrollingElement;
     el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     let dernier = null;
     let stables = 0;
     const tic = () => {
-      const y = window.scrollY;
+      const y = conteneur.scrollTop;
       stables = y === dernier ? stables + 1 : 0;
       dernier = y;
       if (stables >= 3) resolve();          // trois frames sans bouger : c'est fini

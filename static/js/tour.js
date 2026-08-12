@@ -22,12 +22,12 @@ const STEPS = {
       'Tout ce qui est tombé sous son seuil d’alerte, groupé par fournisseur, avec la quantité à commander pour revenir au stock cible. Le bouton mène au réglage des seuils.'],
   ],
   refs: [
-    ['[data-q]', 'Chercher',
+    ['[data-vb-q]', 'Chercher',
       'Le nom, la marque ou le fournisseur. Les accents et les majuscules n’ont pas d’importance.'],
-    ['[data-section="registre"] .thead', 'Trier',
-      'Chaque colonne est cliquable : un clic trie, un second inverse le sens. La dernière colonne trie par date de création.'],
-    ['[data-section="registre"] .trow', 'Une ligne, une bouteille',
-      'Le trait de couleur à gauche dit l’état du stock. Cliquez la ligne pour ouvrir sa fiche, le crayon pour corriger ses informations sans quitter l’écran.'],
+    ['.vb-views', 'Table ou blocs',
+      'Basculez entre la table (colonnes triables, sélection multiple) et les cartes. Tri, groupement par catégorie et import/export vivent dans la même barre.'],
+    ['.bloc', 'Une carte, une bouteille',
+      'Cliquez la carte (ou la ligne, en vue table) pour ouvrir sa fiche et corriger ses informations sans quitter l’écran.'],
   ],
   inv: [
     ['[data-section="comptage"] .thead', 'Compter',

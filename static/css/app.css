@@ -126,7 +126,10 @@ body.nav-epinglee .pin .ic { transform: rotate(180deg); }
   font-family: var(--mono); font-size: 11px; color: var(--ac);
 }
 .user-name { font-size: 12.5px; color: var(--mut); }
-.screen { flex: 1; overflow: auto; padding: 26px 30px 46px; }
+/* --vbar-h : hauteur réelle de la barre gelée une fois figée, pour que tout ce qui doit
+   coller EN DESSOUS d'elle (ex. .table-summary) parte du bon décalage plutôt que d'un
+   nouveau nombre magique. */
+.screen { flex: 1; overflow: auto; padding: 26px 30px 46px; --vbar-h: 60px; }
 
 /* ---------- typographie utilitaire ---------- */
 
@@ -536,7 +539,9 @@ select.input option { background: var(--input); color: var(--ink); }
 
 .trow.picked { background: var(--panel2); box-shadow: inset 2px 0 0 var(--ac); }
 .table-summary {
-  position: sticky; top: 0; z-index: 6;
+  /* Colle juste sous .vbar (même repère « -26px » qu'elle, plus sa hauteur) : sans ce
+     décalage, la synthèse remonte par-dessus la barre de recherche au défilement. */
+  position: sticky; top: calc(var(--vbar-h) - 26px); z-index: 6;
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
   padding: 12px 20px; background: var(--panel2); border-bottom: 1px solid var(--ac);
 }

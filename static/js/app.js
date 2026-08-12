@@ -136,27 +136,33 @@ function renderShell() {
 // modifier une ligne au milieu d'une longue table renvoyait tout en haut. On garde donc
 // une ancre, et on la repose après re-rendu. Une VRAIE navigation, elle, doit bien
 // repartir du haut : d'où le drapeau.
+// C'est `#screen` qui défile réellement (`.screen { overflow: auto }`), pas la fenêtre :
+// l'ancre doit lire/écrire son scrollTop, pas window.scrollY/scrollTo.
+//
+// Pas de péremption par horloge ici (une version antérieure ignorait l'ancre au-delà de
+// 1500ms) : depuis que l'édition passe par la fiche en modale (tâche 6), le ré-rendu
+// déclencheur peut arriver bien après le dernier défilement — le temps d'éditer, pas de
+// jouer contre la montre. `navigation` (une VRAIE navigation) reste le seul signal qui
+// efface l'ancre ; rien d'autre dans l'appli ne redessine un écran sans action de
+// l'utilisateur (pas de rafraîchissement périodique en tâche de fond).
 let ancre = 0;
-let ancreLe = 0;
 let navigation = false;
 
-window.addEventListener('scroll', () => {
+document.getElementById('screen').addEventListener('scroll', () => {
   if (navigation) return;
+  const y = document.getElementById('screen').scrollTop;
   // Un retour à zéro n'efface PAS l'ancre : c'est presque toujours le navigateur qui
   // rogne le défilement parce que le document vient de rapetisser, pas l'utilisateur
   // qui remonte. Le premier piège de cette correction était là.
-  if (window.scrollY > 0) {
-    ancre = window.scrollY;
-    ancreLe = performance.now();
-  }
+  if (y > 0) ancre = y;
 }, { passive: true });
 
 function installerAncre() {
+  const screen = document.getElementById('screen');
   new MutationObserver(() => {
-    if (navigation || ancre <= 0 || window.scrollY > 0) return;
-    if (performance.now() - ancreLe > 1500) return;   // trop vieux : c'était voulu
-    if (document.body.scrollHeight >= ancre + window.innerHeight) window.scrollTo(0, ancre);
-  }).observe(document.getElementById('screen'), { childList: true, subtree: true });
+    if (navigation || ancre <= 0 || screen.scrollTop > 0) return;
+    if (screen.scrollHeight >= ancre + screen.clientHeight) screen.scrollTop = ancre;
+  }).observe(screen, { childList: true, subtree: true });
 }
 
 // L'ancienne fiche était un écran ; elle est devenue une modale posée sur le registre.
@@ -174,7 +180,7 @@ async function route() {
   if (change) {
     navigation = true;
     ancre = 0;
-    window.scrollTo(0, 0);
+    document.getElementById('screen').scrollTop = 0;
     setTimeout(() => { navigation = false; }, 120);
   }
   S.screen = SCREENS[parts[0]] ? parts[0] : 'dash';
