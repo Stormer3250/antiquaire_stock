@@ -15,7 +15,7 @@ const STORE = new Map();
 
 export function tableState(id, defaultSortKey = null, defaultDir = 'asc') {
   if (!STORE.has(id)) {
-    STORE.set(id, { sort: { key: defaultSortKey, dir: defaultDir }, selected: new Set() });
+    STORE.set(id, { sort: { key: defaultSortKey, dir: defaultDir }, selected: new Set(), collapsed: new Set() });
   }
   return STORE.get(id);
 }
@@ -36,13 +36,33 @@ function cellHtml(col, row) {
   return `<div class="${col.align || ''}">${esc(v ?? '')}</div>`;
 }
 
+function rowHtml(r, spec, grid, state) {
+  return `
+      <div class="trow ${spec.rowClass ? spec.rowClass(r) : ''} ${state.selected.has(r.id) ? 'picked' : ''}"
+        style="grid-template-columns:${grid};" data-row="${r.id}">
+        ${spec.select ? `<label class="tick"><input type="checkbox" data-tick="${r.id}"
+          ${state.selected.has(r.id) ? 'checked' : ''} aria-label="Cocher cette ligne"></label>` : ''}
+        ${spec.columns.map((c) => cellHtml(c, r)).join('')}
+      </div>`;
+}
+
 /**
- * spec : { id, columns, rows, grid, select, summary, empty, foot, rowClass, onRowClick }
+ * Partition pure : quelles lignes de `rows` restent affichées une fois les groupes
+ * repliés (via `collapsed`, un Set de labels) retirés. `group` absent/éteint → tout passe.
+ */
+export function visibleRows(rows, group, collapsed) {
+  if (!group?.on) return rows;
+  return rows.filter((r) => !collapsed.has(group.label(r)));
+}
+
+/**
+ * spec : { id, columns, rows, grid, select, summary, empty, foot, rowClass, onRowClick, group }
  * - columns : [{ key, label, align, sortable, cell(row) }]
  * - grid    : la valeur de grid-template-columns SANS la colonne de sélection
  * - select  : true pour la colonne à cocher et la barre de synthèse
  * - summary : (lignesCochees, toutesLignes) => HTML de la barre
- * Renvoie les lignes effectivement affichées, dans l'ordre affiché.
+ * - group   : { on, label(row) } optionnel — sections repliables, voir `visibleRows`
+ * Renvoie les lignes effectivement affichées (triées, sélection/résumé), groupe replié ou non.
  */
 export function renderTable(el, spec) {
   const state = tableState(spec.id, spec.defaultSort);
@@ -56,6 +76,8 @@ export function renderTable(el, spec) {
   });
 
   const grid = spec.select ? `34px ${spec.grid}` : spec.grid;
+  // Tout cocher porte sur toutes les lignes filtrées, groupe replié ou pas : replier
+  // n'est pas décocher.
   const allOn = rows.length > 0 && rows.every((r) => state.selected.has(r.id));
 
   const head = `
@@ -65,15 +87,32 @@ export function renderTable(el, spec) {
       ${spec.columns.map((c) => headCell(c, state)).join('')}
     </div>`;
 
-  const body = rows.length === 0
-    ? (spec.empty || '<div class="empty-note">Rien à afficher.</div>')
-    : rows.map((r) => `
-      <div class="trow ${spec.rowClass ? spec.rowClass(r) : ''} ${state.selected.has(r.id) ? 'picked' : ''}"
-        style="grid-template-columns:${grid};" data-row="${r.id}">
-        ${spec.select ? `<label class="tick"><input type="checkbox" data-tick="${r.id}"
-          ${state.selected.has(r.id) ? 'checked' : ''} aria-label="Cocher cette ligne"></label>` : ''}
-        ${spec.columns.map((c) => cellHtml(c, r)).join('')}
-      </div>`).join('');
+  let body;
+  if (rows.length === 0) {
+    body = spec.empty || '<div class="empty-note">Rien à afficher.</div>';
+  } else if (spec.group?.on) {
+    const label = spec.group.label;
+    const counts = new Map();
+    rows.forEach((r) => { const l = label(r); counts.set(l, (counts.get(l) || 0) + 1); });
+    let current = null;
+    const parts = [];
+    rows.forEach((r) => {
+      const l = label(r);
+      if (l !== current) {
+        current = l;
+        parts.push(`
+    <div class="tgroup" data-group="${esc(l)}" style="grid-template-columns:1fr;">
+      <span class="tgroup-caret">${state.collapsed.has(l) ? '▸' : '▾'}</span>
+      ${esc(l)} <span class="tgroup-n">· ${counts.get(l)}</span>
+    </div>`);
+      }
+      if (state.collapsed.has(l)) return;
+      parts.push(rowHtml(r, spec, grid, state));
+    });
+    body = parts.join('');
+  } else {
+    body = rows.map((r) => rowHtml(r, spec, grid, state)).join('');
+  }
 
   // La synthèse est posée AVANT l'en-tête : ce que l'on vient de cocher se lit tout de
   // suite, sans descendre au bas d'une table de trois cents lignes.
@@ -106,6 +145,20 @@ function paintSummary(el, spec, rows, state) {
 export function bindTable(el, spec, rerender) {
   const state = tableState(spec.id, spec.defaultSort);
   const rows = applySort(spec.rows, state.sort, spec.accessors);
+  // Le même ensemble que celui peint par renderTable, pour que les data-row du DOM
+  // retrouvent toujours leur ligne (les groupes repliés n'ont pas de nœud).
+  const vis = visibleRows(rows, spec.group, state.collapsed);
+
+  if (spec.group?.on) {
+    el.querySelectorAll('[data-group]').forEach((h) =>
+      h.addEventListener('click', () => {
+        const label = h.dataset.group;
+        if (state.collapsed.has(label)) state.collapsed.delete(label);
+        else state.collapsed.add(label);
+        rerender();
+      })
+    );
+  }
 
   el.querySelectorAll('[data-sort]').forEach((h) => {
     const go = () => {
@@ -153,7 +206,7 @@ export function bindTable(el, spec, rerender) {
     el.querySelectorAll('[data-row]').forEach((node) =>
       node.addEventListener('click', (e) => {
         if (e.target.closest('.tick, button, input, select, .cc-sel')) return;
-        const row = rows.find((r) => r.id === Number(node.dataset.row));
+        const row = vis.find((r) => r.id === Number(node.dataset.row));
         if (row) spec.onRowClick(row);
       })
     );
@@ -192,6 +245,14 @@ function demo() {
   assert(cellHtml({ key: 'nom' }, { nom: '<b>x</b>' }).includes('&lt;b&gt;'), 'échappement par défaut');
   assert(cellHtml({ key: 'nom', cell: (r) => `<i>${r.nom}</i>` }, { nom: 'y' }) === '<i>y</i>',
     'cellule sur mesure');
+
+  // groupement : partition stable, groupes repliés exclus du rendu
+  const st = tableState('g', 'nom');
+  st.collapsed.add('Rhums');
+  const all = [{ id: 1, cat: 'Gins' }, { id: 2, cat: 'Rhums' }, { id: 3, cat: 'Gins' }];
+  const vis = visibleRows(all, { on: true, label: (r) => r.cat }, st.collapsed);
+  assert(vis.map((r) => r.id).join(',') === '1,3', 'les lignes d’un groupe replié disparaissent');
+  assert(visibleRows(all, { on: false }, st.collapsed).length === 3, 'groupement éteint : tout passe');
 }
 
 if (typeof process !== 'undefined' && /table\.m?js$/.test(process.argv?.[1] || '')) demo();

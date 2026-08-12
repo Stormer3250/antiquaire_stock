@@ -235,6 +235,13 @@ select.input option { background: var(--input); color: var(--ink); }
   border-bottom: 1px solid var(--line2);
 }
 .trow:hover { background: #201A17; }
+.tgroup { display: grid; align-items: center; padding: 9px 20px; gap: 8px;
+  background: var(--panel2); border-bottom: 1px solid var(--line);
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--mut2); cursor: pointer; user-select: none; }
+.tgroup:hover { color: var(--ink); }
+.tgroup-caret { display: inline-block; width: 12px; color: var(--ac); }
+.tgroup-n { color: var(--mut3); letter-spacing: 0; }
 .cell-main { min-width: 0; }
 .cell-main .nom {
   font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
