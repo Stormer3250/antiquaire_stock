@@ -98,23 +98,25 @@ export function renderTable(el, spec) {
     body = spec.empty || '<div class="empty-note">Rien à afficher.</div>';
   } else if (spec.group?.on) {
     const label = spec.group.label;
-    const counts = new Map();
-    rows.forEach((r) => { const l = label(r); counts.set(l, (counts.get(l) || 0) + 1); });
-    let current = null;
-    const parts = [];
+    // Une section par label, à sa première apparition dans l'ordre trié — pas une
+    // section par changement de valeur : trier par une autre colonne que le groupe ne
+    // doit pas éclater un même label en plusieurs en-têtes (même partition que blocks.js).
+    const membres = new Map();
     rows.forEach((r) => {
       const l = label(r);
-      if (l !== current) {
-        current = l;
-        parts.push(`
+      if (!membres.has(l)) membres.set(l, []);
+      membres.get(l).push(r);
+    });
+    const parts = [];
+    for (const [l, mrows] of membres) {
+      parts.push(`
     <div class="tgroup" data-group="${esc(l)}" style="grid-template-columns:1fr;">
       <span class="tgroup-caret">${collapsed.has(l) ? '▸' : '▾'}</span>
-      ${esc(l)} <span class="tgroup-n">· ${counts.get(l)}</span>
+      ${esc(l)} <span class="tgroup-n">· ${mrows.length}</span>
     </div>`);
-      }
-      if (collapsed.has(l)) return;
-      parts.push(rowHtml(r, spec, grid, state));
-    });
+      if (collapsed.has(l)) continue;
+      mrows.forEach((r) => parts.push(rowHtml(r, spec, grid, state)));
+    }
     body = parts.join('');
   } else {
     body = rows.map((r) => rowHtml(r, spec, grid, state)).join('');
@@ -260,6 +262,28 @@ function demo() {
   const vis = visibleRows(all, { on: true, label: (r) => r.cat }, st.collapsed);
   assert(vis.map((r) => r.id).join(',') === '1,3', 'les lignes d’un groupe replié disparaissent');
   assert(visibleRows(all, { on: false }, st.collapsed).length === 3, 'groupement éteint : tout passe');
+
+  // tri par une colonne hors-groupe : le label du groupe n'est alors plus contigu dans
+  // les lignes triées (A=Gins, B=Rhums, C=Gins → Gins apparaît deux fois, séparé par
+  // Rhums). Doit rester UNE seule section « Gins » (partition par Map à la première
+  // apparition, pas par changement de valeur en scannant les lignes triées).
+  const div = { innerHTML: '', querySelector: () => null, querySelectorAll: () => [] };
+  const spec = {
+    id: 'coalesce',
+    columns: [{ key: 'nom' }],
+    rows: [
+      { id: 1, nom: 'A', cat: 'Gins' },
+      { id: 2, nom: 'B', cat: 'Rhums' },
+      { id: 3, nom: 'C', cat: 'Gins' },
+    ],
+    grid: '1fr',
+    group: { on: true, label: (r) => r.cat },
+    defaultSort: 'nom',
+  };
+  renderTable(div, spec);
+  const nGroups = (div.innerHTML.match(/class="tgroup"/g) || []).length;
+  assert(nGroups === 2, `une section par label malgré le tri qui les entrelace (trouvé ${nGroups})`);
+  assert(/Gins[\s\S]*Rhums[\s\S]*Gins/.test(div.innerHTML) === false, 'Gins ne réapparaît pas après Rhums');
 }
 
 if (typeof process !== 'undefined' && /table\.m?js$/.test(process.argv?.[1] || '')) demo();

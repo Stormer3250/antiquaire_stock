@@ -90,23 +90,25 @@ export async function render(el) {
   // elle, garde tout).
   function rowsHtml() {
     if (!st.group) return visibleRefs.map(rowHtml).join('');
-    const counts = new Map();
-    visibleRefs.forEach((r) => counts.set(r.categorie_nom, (counts.get(r.categorie_nom) || 0) + 1));
-    let current = null;
-    const parts = [];
+    // Une section par catégorie, à sa première apparition — pas par changement de valeur
+    // en scannant les lignes triées (sinon trier par une autre colonne éclaterait une
+    // même catégorie en plusieurs en-têtes). Même partition que table.js/blocks.js.
+    const membres = new Map();
     visibleRefs.forEach((r) => {
       const l = r.categorie_nom;
-      if (l !== current) {
-        current = l;
-        parts.push(`
+      if (!membres.has(l)) membres.set(l, []);
+      membres.get(l).push(r);
+    });
+    const parts = [];
+    for (const [l, rows] of membres) {
+      parts.push(`
     <div class="tgroup" data-group="${esc(l)}" style="grid-template-columns:1fr;">
       <span class="tgroup-caret">${st.collapsed.has(l) ? '▸' : '▾'}</span>
-      ${esc(l)} <span class="tgroup-n">· ${counts.get(l)}</span>
+      ${esc(l)} <span class="tgroup-n">· ${rows.length}</span>
     </div>`);
-      }
-      if (st.collapsed.has(l)) return;
-      parts.push(rowHtml(r));
-    });
+      if (st.collapsed.has(l)) continue;
+      rows.forEach((r) => parts.push(rowHtml(r)));
+    }
     return parts.join('');
   }
 
