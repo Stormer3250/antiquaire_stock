@@ -53,7 +53,7 @@ export function openOptimiser({ tarif, onApplied }) {
       <div class="${r.violations.length ? 'card-warn' : 'card-ok'}" style="padding:16px 18px;">
         <div style="font-size:14px; line-height:1.6;">
           <b>${s.n} recette${s.n > 1 ? 's' : ''}, ${s.changees} prix change${s.changees > 1 ? 'nt' : ''}.</b><br>
-          Marge moyenne ${pc(s.marge_avant, 1)} → <b>${pc(s.marge_apres, 1)}</b> ·
+          Marge moyenne ${pc(s.marge_avant)} → <b>${pc(s.marge_apres)}</b> ·
           écart ${eur(s.ecart_avant)} → <b>${eur(s.ecart_apres)}</b> ·
           ${s.sous_plancher
             ? `<b class="warn-text">${s.sous_plancher} sous le plancher</b>`
@@ -75,8 +75,8 @@ export function openOptimiser({ tarif, onApplied }) {
         <div class="cmp-row">
           <div class="cell-main"><div class="nom">${esc(li.nom)}${li.verrouille ? ' · figé' : ''}</div>
             <div class="sub">coût ${eur(li.cost)}</div></div>
-          <div class="num r">${eur(li.prix_avant)}<span class="cmp-marge">${pc(li.marge_avant, 1)}</span></div>
-          <div class="num r">${eur(li.prix_apres)}<span class="cmp-marge">${pc(li.marge_apres, 1)}</span></div>
+          <div class="num r">${eur(li.prix_avant)}<span class="cmp-marge">${pc(li.marge_avant)}</span></div>
+          <div class="num r">${eur(li.prix_apres)}<span class="cmp-marge">${pc(li.marge_apres)}</span></div>
           <div class="num r ${li.delta > 0 ? 'ok-text' : li.delta < 0 ? 'warn-text' : ''}">
             ${Math.abs(li.delta) < 0.005 ? '—' : (li.delta > 0 ? '+' : '') + eur(li.delta)}
             <span class="cmp-marge">${esc(fleche(li.delta))}</span></div>

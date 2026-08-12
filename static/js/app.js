@@ -1,7 +1,7 @@
 // L'Antiquaire — coquille : routage, barre latérale, en-tête, état partagé.
 
 import { apiGet } from './api.js';
-import { esc, pc, num } from './ui.js';
+import { esc, pc, num, setPctDecimales } from './ui.js';
 import * as dash from './screens/dash.js';
 import * as refs from './screens/refs.js';
 import * as product from './screens/product.js';
@@ -69,6 +69,7 @@ const TITLES = {
 
 export async function reloadMeta() {
   S.meta = await apiGet('/api/state');
+  setPctDecimales(S.meta.pricing.pct_decimales ?? 0);
 }
 
 export function lieuQuery() {

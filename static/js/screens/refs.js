@@ -116,7 +116,7 @@ export async function render(el) {
         ${masquees ? `<span class="sum-hidden">+ ${masquees} hors filtre, non touchée${masquees > 1 ? 's' : ''}</span>` : ''}
         <span>Valeur HT <b class="num">${eur(valeur)}</b></span>
         <span>Coût unitaire moyen <b class="num">${cout === null ? '—' : eur(cout)}</b></span>
-        <span>Marge moyenne <b class="num ${marge !== null && marge < pr.min ? 'warn-text' : ''}">${marge === null ? '—' : pc(marge, 1)}</b></span>
+        <span>Marge moyenne <b class="num ${marge !== null && marge < pr.min ? 'warn-text' : ''}">${marge === null ? '—' : pc(marge)}</b></span>
         <span>Sous le plancher <b class="num">${basses}</b></span>
         <span>Sous le seuil <b class="num">${sousSeuil}</b></span>
       </div>

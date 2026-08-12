@@ -18,7 +18,7 @@ function kpisHtml(k, pr) {
   }
   const cases = [
     ['Recettes', String(k.n), ''],
-    ['Marge moyenne', pc(k.marge_moyenne, 1), `cible ${pc(pr.cible)}`],
+    ['Marge moyenne', pc(k.marge_moyenne), `cible ${pc(pr.cible)}`],
     ['Prix moyen', eur(k.prix_moyen), `coût matière ${eur(k.cout_moyen)}`],
     ['Écart cher / pas cher', eur(k.ecart), `${eur(k.prix_mini)} à ${eur(k.prix_maxi)}`],
   ];
@@ -133,7 +133,7 @@ export async function render(el) {
         align: 'r',
         cell: (c) => {
           const m = margeDe(c);
-          return `<div class="num r" style="font-size:12.5px;"><span class="${m >= pr.min ? 'ok-text' : 'warn-text'}">${pc(m, 1)}</span></div>`;
+          return `<div class="num r" style="font-size:12.5px;"><span class="${m >= pr.min ? 'ok-text' : 'warn-text'}">${pc(m)}</span></div>`;
         },
       },
       {
@@ -156,7 +156,7 @@ export async function render(el) {
       return `
       <div class="sum-figs">
         <span class="sum-count">${picked.length} retenue${picked.length > 1 ? 's' : ''}</span>
-        <span>Marge moyenne <b class="num">${pc(moy(margeDe), 1)}</b></span>
+        <span>Marge moyenne <b class="num">${pc(moy(margeDe))}</b></span>
         <span>Prix moyen <b class="num">${eur(moy(prixDe))}</b></span>
         <span>Coût matière moyen <b class="num">${eur(moy((x) => x.cost))}</b></span>
         <span>Écart <b class="num">${eur(Math.max(...prix) - Math.min(...prix))}</b></span>
@@ -477,12 +477,12 @@ function comparer(menu, tarifs, pr) {
       <div class="cmp-row">
         <div class="cell-main"><div class="nom">${esc(c.nom)}</div>
           <div class="sub">coût ${eur(c.cost)}</div></div>
-        <div class="num r">${eur(pa)}<span class="cmp-marge">${pc(margeDans(ta, c), 1)}</span></div>
-        <div class="num r">${eur(pb)}<span class="cmp-marge">${pc(margeDans(tb, c), 1)}</span></div>
+        <div class="num r">${eur(pa)}<span class="cmp-marge">${pc(margeDans(ta, c))}</span></div>
+        <div class="num r">${eur(pb)}<span class="cmp-marge">${pc(margeDans(tb, c))}</span></div>
         <div class="num r ${d > 0 ? 'ok-text' : d < 0 ? 'warn-text' : ''}">${d === 0 ? '—' : (d > 0 ? '+' : '') + eur(d)}</div>
       </div>`;
     }).join('');
-    const bilan = (t) => `${pc(moyenne(t, margeDans), 1)} · ${eur(moyenne(t, prixDans))}`;
+    const bilan = (t) => `${pc(moyenne(t, margeDans))} · ${eur(moyenne(t, prixDans))}`;
     return `
     <div class="modal-head">
       <div class="serif-title">Comparer deux tarifications</div>
@@ -500,7 +500,7 @@ function comparer(menu, tarifs, pr) {
         <div class="mono-label">Marge moyenne · prix moyen</div>
         <div class="num r">${bilan(ta)}</div>
         <div class="num r">${bilan(tb)}</div>
-        <div class="num r">${pc(moyenne(tb, margeDans) - moyenne(ta, margeDans), 1)}</div>
+        <div class="num r">${pc(moyenne(tb, margeDans) - moyenne(ta, margeDans))}</div>
       </div>
       <div class="sub pretty">Plancher de marge de la maison : ${pc(pr.min)}.</div>
     </div>`;

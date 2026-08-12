@@ -19,8 +19,14 @@ export function num(n, d) {
   });
 }
 
-export function pc(n, d = 0) {
-  return num(n, d) + ' %';
+let PCT_D = 0;               // décimales des pourcentages, réglées dans Paramètres
+
+export function setPctDecimales(d) {
+  PCT_D = Number.isInteger(d) && d >= 0 && d <= 2 ? d : 0;
+}
+
+export function pc(n, d) {
+  return num(n, d === undefined ? PCT_D : d) + ' %';
 }
 
 export function parseNum(v) {
@@ -119,3 +125,16 @@ export function alertModal({ title, body = '' }) {
     scrim.querySelector('[data-ok]').focus();
   });
 }
+
+function demo() {
+  const assert = (c, m) => { if (!c) throw new Error(m); };
+  assert(pc(72.46) === '72 %', 'défaut : entier');
+  setPctDecimales(1);
+  assert(pc(72.46) === '72,5 %', 'réglage appliqué');
+  assert(pc(72.46, 0) === '72 %', 'un d explicite gagne toujours');
+  setPctDecimales(9);
+  assert(pc(72.46) === '72 %', 'valeur hors bornes → 0');
+  setPctDecimales(0);
+}
+
+if (typeof process !== 'undefined' && /ui\.m?js$/.test(process.argv?.[1] || '')) demo();

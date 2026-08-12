@@ -40,7 +40,7 @@ export async function render(el, state) {
           ? (override ? 'Prix fixé à la main' : 'Prix conseillé TTC arrondi')
           : `Sous le plancher de ${pc(pr.min)}`}</div>
         <div style="font-size:12.5px; color:${ok ? 'var(--ok-mut)' : 'var(--warn-mut)'};">
-          Marge réelle ${pc(reelle, 1)} · coût matière ${pc(100 - reelle, 1)}</div>
+          Marge réelle ${pc(reelle)} · coût matière ${pc(100 - reelle)}</div>
         ${override
           ? `<button class="btn muted" data-clear-override style="align-self:flex-start; margin-top:4px;">Revenir au prix calculé</button>`
           : ''}
@@ -119,7 +119,7 @@ export async function render(el, state) {
     { k: 'Droit d’accise', n: p.fiscal.regime === 'aucun' ? 'non soumis' : `régime ${p.fiscal.regime}`, v: eur(p.fiscal.accise, 3) },
     { k: 'Cotisation sécurité sociale', n: p.fiscal.ss ? `${num(S.meta.rates.ss, 0)} €/hL AP` : '—', v: eur(p.fiscal.ss, 3) },
     { k: 'Total taxes par dose', n: p.droits_inclus ? 'compris dans le prix d’achat' : 'ajouté au coût matière', v: eur(taxesDose, 3) },
-    { k: 'Poids sur le coût matière', n: 'taxes ÷ coût de la dose', v: p.cout_dose > 0 ? pc(taxesDose / p.cout_dose * 100, 1) : '—' },
+    { k: 'Poids sur le coût matière', n: 'taxes ÷ coût de la dose', v: p.cout_dose > 0 ? pc(taxesDose / p.cout_dose * 100) : '—' },
   ];
 
   el.innerHTML = `

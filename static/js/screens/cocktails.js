@@ -21,7 +21,7 @@ function cartesSummary(picked) {
   <div class="table-summary" style="flex-direction:column; align-items:stretch; gap:9px;">
     <div class="sum-figs" style="flex-direction:column; gap:7px;">
       <span class="sum-count">${picked.length} recette${picked.length > 1 ? 's' : ''} retenue${picked.length > 1 ? 's' : ''}</span>
-      <span>Marge moyenne <b class="num">${pc(moy((x) => x.marge), 1)}</b></span>
+      <span>Marge moyenne <b class="num">${pc(moy((x) => x.marge))}</b></span>
       <span>Prix moyen <b class="num">${eur(moy((x) => x.prix_ttc))}</b></span>
       <span>Coût matière moyen <b class="num">${eur(moy((x) => x.cost))}</b></span>
       <span>De <b class="num">${eur(bas)}</b> à <b class="num">${eur(haut)}</b>, écart <b class="num">${eur(haut - bas)}</b></span>
@@ -170,8 +170,8 @@ export async function render(el) {
       <input type="range" min="8" max="30" step="0.5" value="${c.prix_ttc}" data-price style="width:100%;">
       ${[
         { k: 'Prix HT', v: eur(c.prix_ht) },
-        { k: 'Coût matière', v: `${eur(c.cost)} · ${pc(c.prix_ht > 0 ? c.cost / c.prix_ht * 100 : 0, 1)}` },
-        { k: 'Marge brute', v: `${eur(c.prix_ht - c.cost)} · ${pc(c.marge, 1)}` },
+        { k: 'Coût matière', v: `${eur(c.cost)} · ${pc(c.prix_ht > 0 ? c.cost / c.prix_ht * 100 : 0)}` },
+        { k: 'Marge brute', v: `${eur(c.prix_ht - c.cost)} · ${pc(c.marge)}` },
         { k: 'TVA collectée', v: eur(c.tva) },
       ].map((m) => `
       <div class="row spread" style="padding-top:11px; border-top:1px solid ${c.ok ? '#2C3D1B' : '#402825'};">

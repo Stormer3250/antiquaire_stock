@@ -67,7 +67,7 @@ export async function render(el) {
             <div class="sub">${num(p.dose_cl, 0)} cl à ${num(p.abv, 1)} % vol.</div>
           </div>
           <div class="num r" style="font-size:12.5px; color:var(--ac3);">${eur(t, 3)}</div>
-          <div class="num r" style="font-size:12px; color:var(--mut2);">${p.cout_dose > 0 ? pc(t / p.cout_dose * 100, 1) : '—'}</div>
+          <div class="num r" style="font-size:12px; color:var(--mut2);">${p.cout_dose > 0 ? pc(t / p.cout_dose * 100) : '—'}</div>
         </div>`;
         }).join('')}
       <div class="panel-foot"><span>Taxe par dose</span><span>part du coût matière</span></div>
