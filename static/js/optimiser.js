@@ -35,7 +35,7 @@ export function openOptimiser({ tarif, onApplied, stack = false }) {
       ${CHAMPS.map((c) => `
       <div class="field">
         <div class="mono-label">${esc(c.label)}</div>
-        <input class="input num" data-c="${c.key}" value="${valeurs[c.key] ?? ''}"
+        <input class="input num" data-c="${c.key}" value="${esc(valeurs[c.key] ?? '')}"
           placeholder="${esc(c.ph)}">
       </div>`).join('')}
     </div>

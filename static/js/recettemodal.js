@@ -105,7 +105,7 @@ export async function openRecette(cocktailId, { onClose } = {}) {
   function doseLabel(i) {
     const r = refs.find((x) => x.id === i.ref_id);
     if (!r) return num(i.qty, 1);
-    return r.suivi ? `${num(i.qty, 1)} cl` : `${num(i.qty, 0)} ${r.unite}`;
+    return r.suivi ? `${num(i.qty, 1)} cl` : `${num(i.qty, 0)} ${esc(r.unite)}`;
   }
 
   function compositionHtml() {
@@ -221,7 +221,7 @@ export async function openRecette(cocktailId, { onClose } = {}) {
         <div class="field" style="grid-column:1 / -1;"><div class="mono-label">Description</div>
           <textarea class="input" data-desc rows="2" placeholder="Description pour la carte…">${esc(c.description)}</textarea></div>
       </div>
-      <div class="fiche-deux">
+      <div class="fiche-deux fiche-deux-recette">
         <div class="panel">${compositionHtml()}</div>
         <div class="stack" style="gap:14px;">${pricingHtml()}</div>
       </div>
