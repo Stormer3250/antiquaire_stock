@@ -5,6 +5,7 @@ import { icone } from '../icons.js';
 import { esc, eur, num, parseNum, confirmModal } from '../ui.js';
 import { S, refresh, lieuQuery, fmtStock } from '../app.js';
 import { openRefModal } from '../refmodal.js';
+import { openFiche } from '../fiche.js';
 import { mountImportCard } from '../importcard.js';
 import { renderTable, bindTable, tableState } from '../table.js';
 import { openBulkModal } from '../bulkmodal.js';
@@ -229,7 +230,7 @@ export async function render(el) {
 
   el.querySelectorAll('[data-edit]').forEach((b) =>
     b.addEventListener('click', () =>
-      openRefModal({ ref: stockData.refs.find((x) => x.id === Number(b.dataset.edit)) })
+      openFiche(Number(b.dataset.edit), { onClose: () => render(el) })
     )
   );
   el.querySelectorAll('[data-del]').forEach((b) =>

@@ -4,7 +4,6 @@ import { apiGet } from './api.js';
 import { esc, pc, num, setPctDecimales } from './ui.js';
 import * as dash from './screens/dash.js';
 import * as refs from './screens/refs.js';
-import * as product from './screens/product.js';
 import * as inv from './screens/inventory.js';
 import * as cocktails from './screens/cocktails.js';
 import * as menus from './screens/menus.js';
@@ -13,6 +12,7 @@ import * as bareme from './screens/bareme.js';
 import * as config from './screens/config.js';
 import { openReception } from './reception.js';
 import { openRefModal } from './refmodal.js';
+import { openFiche } from './fiche.js';
 import { installSelectUpgrader } from './select.js';
 import { installPalette } from './palette.js';
 import { installTour, autoTour } from './tour.js';
@@ -53,12 +53,11 @@ function appliquerEpingle() {
   }
 }
 
-const SCREENS = { dash, refs, product, inv, cocktails, menus, cave, bareme, config };
+const SCREENS = { dash, refs, inv, cocktails, menus, cave, bareme, config };
 
 const TITLES = {
   dash: ['Bonsoir, le comptoir est ouvert', 'Valeur de la cave, commandes et marges des cartes'],
   refs: ['Le grand registre', 'Références suivies et non suivies'],
-  product: ['Fiche bouteille', 'Coût de revient, part fiscale et prix conseillé'],
   inv: ['Inventaire', 'Comptage à la bouteille · niveau de l’entamée en dixièmes'],
   cocktails: ['Recettes', 'Saisie des recettes, coût matière et marge'],
   menus: ['Cartes & tarifications', 'Regrouper les recettes, tenir plusieurs grilles de prix'],
@@ -92,10 +91,9 @@ export async function refresh() {
 }
 
 function renderShell() {
-  const navKey = S.screen === 'product' ? 'refs' : S.screen;
   document.getElementById('nav').innerHTML = NAV.map(
     (n) => `
-    <button class="${n.key === navKey ? 'active' : ''}" data-nav="${n.key}"
+    <button class="${n.key === S.screen ? 'active' : ''}" data-nav="${n.key}"
       title="${esc(n.label)}" aria-label="${esc(n.label)}">
       ${icone(n.ic)}<span class="lib">${esc(n.label)}</span>
     </button>`
@@ -114,7 +112,7 @@ function renderShell() {
 
   // Un lieu de stock n'a aucun sens sur les recettes, les cartes, le barème ou les
   // réglages : on ne montre le sélecteur que là où il change quelque chose.
-  const AVEC_LIEU = new Set(['dash', 'refs', 'inv', 'cave', 'product']);
+  const AVEC_LIEU = new Set(['dash', 'refs', 'inv', 'cave']);
   const seg = document.getElementById('lieu-seg');
   seg.hidden = !AVEC_LIEU.has(S.screen);
   if (seg.hidden) { seg.innerHTML = ''; return; }
@@ -161,8 +159,17 @@ function installerAncre() {
   }).observe(document.getElementById('screen'), { childList: true, subtree: true });
 }
 
+// L'ancienne fiche était un écran ; elle est devenue une modale posée sur le registre.
+// Les liens #/product/12 restent donc valides : ils atterrissent sur #/refs, fiche ouverte.
+let ficheEnAttente = null;
+
 async function route() {
   const parts = (location.hash || '#/dash').slice(2).split('/');
+  if (parts[0] === 'product') {
+    ficheEnAttente = Number(parts[1]) || null;
+    location.hash = '#/refs';   // le changement de hash relance route()
+    return;
+  }
   const change = parts[0] !== S.screen || (parts[1] ? Number(parts[1]) : null) !== S.param;
   if (change) {
     navigation = true;
@@ -177,6 +184,11 @@ async function route() {
   el.innerHTML = '';
   await SCREENS[S.screen].render(el, S);
   autoTour(S.screen);
+  if (ficheEnAttente) {
+    const id = ficheEnAttente;
+    ficheEnAttente = null;
+    openFiche(id, { onClose: refresh });
+  }
 }
 
 async function boot() {

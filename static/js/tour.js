@@ -29,12 +29,6 @@ const STEPS = {
     ['[data-section="registre"] .trow', 'Une ligne, une bouteille',
       'Le trait de couleur à gauche dit l’état du stock. Cliquez la ligne pour ouvrir sa fiche, le crayon pour corriger ses informations sans quitter l’écran.'],
   ],
-  product: [
-    ['[data-price]', 'Le prix conseillé',
-      'Calculé à partir du coût de la dose et de la marge visée, puis arrondi au pas défini dans Configuration. Saisir un prix à la main le fige : un bouton apparaît pour revenir au calcul.'],
-    ['[data-section="calcul"]', 'Comment on arrive là',
-      'Prix d’achat divisé par le nombre de doses, plus les droits d’accise et la cotisation sécurité sociale si le prix d’achat ne les contient pas déjà. Cela donne le coût d’une dose. Le prix de vente HT vaut ce coût divisé par (1 moins la marge), puis la TVA s’ajoute.'],
-  ],
   inv: [
     ['[data-section="comptage"] .thead', 'Compter',
       'Une ligne par référence. Le niveau de la bouteille entamée d’un côté, le nombre de bouteilles pleines de l’autre.'],

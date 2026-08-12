@@ -1,7 +1,8 @@
-// Modale de création / édition d'une référence (suivie ou non suivie).
+// Modale de création d'une référence (suivie ou non suivie).
+// L'édition, elle, se fait dans la fiche unifiée (fiche.js) : ici on ne fait que créer.
 
 import { apiSend } from './api.js';
-import { esc, num, parseNum, openModal, closeModal, alertModal } from './ui.js';
+import { esc, parseNum, openModal, closeModal, alertModal } from './ui.js';
 import { S, refresh } from './app.js';
 
 function options(list, selected) {
@@ -18,24 +19,22 @@ function fieldHtml(f, value) {
   </div>`;
 }
 
-// ref: null (création) ou ligne de /api/stock (édition)
-// onSaved(refId) : rappel après enregistrement ; suivi : type par défaut
-export function openRefModal({ ref = null, suivi = true, onSaved = null } = {}) {
-  const edit = !!ref;
+// onSaved(refId) : rappel après création ; suivi : type par défaut
+export function openRefModal({ suivi = true, onSaved = null } = {}) {
   const catOptions = () =>
     S.meta.categories
       .filter((c) => !['Consommable', 'Garniture & épices'].includes(c.nom))
       .map((c) => ({ value: c.id, label: c.nom }));
 
   const state = {
-    suivi: edit ? ref.suivi : suivi,
-    cat: edit ? ref.categorie_id : null,
-    four: edit ? ref.fournisseur : (S.meta.lists.fournisseurs[0] || ''),
-    unite: edit ? ref.unite : (S.meta.lists.unites[0] || 'pièce'),
-    droits: edit ? ref.droits_inclus : false,
-    alcoolise: edit ? ref.alcoolise !== false : true,
-    regime: edit && ref.regime_custom ? ref.regime : '',   // '' = hérité de la catégorie
-    dom: edit ? !!ref.dom : false,
+    suivi,
+    cat: null,
+    four: S.meta.lists.fournisseurs[0] || '',
+    unite: S.meta.lists.unites[0] || 'pièce',
+    droits: false,
+    alcoolise: true,
+    regime: '',            // '' = hérité de la catégorie
+    dom: false,
     vals: {},
   };
 
@@ -93,20 +92,14 @@ export function openRefModal({ ref = null, suivi = true, onSaved = null } = {}) 
   }
 
   function currentValue(key) {
-    if (key in state.vals) return state.vals[key];
-    if (!edit) return '';
-    // la dose reçue est celle qui s'applique : ne pré-remplir que si c'est un choix
-    if (key === 'dose_cl' && !ref.dose_custom) return '';
-    const v = ref[key];
-    if (v === null || v === undefined) return '';
-    return typeof v === 'number' ? num(v, v % 1 ? 2 : 0) : v;
+    return state.vals[key] ?? '';
   }
 
   function html() {
     const f = fields();
     return `
     <div class="modal-head">
-      <div class="serif-title">${edit ? 'Éditer la référence' : state.suivi ? 'Nouvelle référence suivie' : 'Nouvelle garniture non suivie'}</div>
+      <div class="serif-title">${state.suivi ? 'Nouvelle référence suivie' : 'Nouvelle garniture non suivie'}</div>
       <button class="modal-x" aria-label="Fermer">×</button>
     </div>
     <div class="row" style="padding:18px 22px; border-bottom:1px solid var(--line2);">
@@ -128,14 +121,12 @@ export function openRefModal({ ref = null, suivi = true, onSaved = null } = {}) 
       ${fiscalHtml()}
     </div>
     <div class="modal-foot">
-      <div class="modal-hint">${edit
-        ? 'Les modifications se répercutent sur les recettes et les prix conseillés.'
-        : state.suivi
-          ? 'Créée avec un stock à zéro sur chaque lieu — passez une réception pour la remplir.'
-          : 'Aucun stock, aucun seuil : la garniture sert uniquement au chiffrage des recettes.'}</div>
+      <div class="modal-hint">${state.suivi
+        ? 'Créée avec un stock à zéro sur chaque lieu — passez une réception pour la remplir.'
+        : 'Aucun stock, aucun seuil : la garniture sert uniquement au chiffrage des recettes.'}</div>
       <div class="row">
         <button class="btn muted" data-cancel>Annuler</button>
-        <button class="btn-solid" data-save>${edit ? 'Enregistrer' : 'Créer'}</button>
+        <button class="btn-solid" data-save>Créer</button>
       </div>
     </div>`;
   }
@@ -173,7 +164,7 @@ export function openRefModal({ ref = null, suivi = true, onSaved = null } = {}) 
   }
 
   async function save() {
-    const get = (k) => state.vals[k] ?? (edit ? ref[k] : '');
+    const get = (k) => state.vals[k] ?? '';
     const body = {
       nom: String(get('nom') || '').trim(),
       marque: String(get('marque') || '').trim(),
@@ -211,13 +202,7 @@ export function openRefModal({ ref = null, suivi = true, onSaved = null } = {}) 
       body.alcoolise = false;
     }
     try {
-      let id;
-      if (edit) {
-        await apiSend('PATCH', `/api/refs/${ref.id}`, body);
-        id = ref.id;
-      } else {
-        id = (await apiSend('POST', '/api/refs', body)).id;
-      }
+      const { id } = await apiSend('POST', '/api/refs', body);
       closeModal();
       if (onSaved) await onSaved(id);
       else await refresh();

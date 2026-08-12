@@ -3,8 +3,8 @@
 import { apiGet, apiSend } from '../api.js';
 import { icone } from '../icons.js';
 import { esc, eur, num, pc, confirmModal, openModal } from '../ui.js';
-import { S, go, refresh, lieuQuery, fmtStock } from '../app.js';
-import { openRefModal } from '../refmodal.js';
+import { S, refresh, lieuQuery, fmtStock } from '../app.js';
+import { openFiche } from '../fiche.js';
 import { mountImportCard } from '../importcard.js';
 import { renderTable, bindTable, tableState } from '../table.js';
 import { openBulkModal } from '../bulkmodal.js';
@@ -141,7 +141,7 @@ export async function render(el) {
       : `<div class="empty-note">Aucune référence ne correspond à cette recherche.</div>`,
     foot: `<span>${filtered.length} référence${filtered.length > 1 ? 's' : ''} affichée${filtered.length > 1 ? 's' : ''}</span>
       <span>Prix conseillés TTC · marge cible ${pc(pr.cible)} · « · » = prix fixé à la main</span>`,
-    onRowClick: (r) => (r.suivi ? go(`#/product/${r.id}`) : openRefModal({ ref: r })),
+    onRowClick: (r) => openFiche(r.id, { onClose: () => render(el) }),
     bindSummary: (bar, picked) => {
       const bulk = bar.querySelector('[data-bulk]');
       if (bulk) {
@@ -212,7 +212,7 @@ export async function render(el) {
   });
   table.querySelectorAll('[data-edit]').forEach((b) =>
     b.addEventListener('click', () => {
-      openRefModal({ ref: rows.find((x) => x.id === Number(b.dataset.edit)) });
+      openFiche(Number(b.dataset.edit), { onClose: () => render(el) });
     })
   );
   table.querySelectorAll('[data-del]').forEach((b) =>
