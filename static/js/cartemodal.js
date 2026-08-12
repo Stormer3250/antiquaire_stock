@@ -16,6 +16,7 @@ import { esc, eur, num, pc, parseNum, openModal, closeModal, confirmModal, alert
 import { S } from './app.js';
 import { renderTable, bindTable, tableState } from './table.js';
 import { openOptimiser } from './optimiser.js';
+import { exporter } from './export.js';
 
 const T = 'carte-recettes';
 
@@ -208,6 +209,7 @@ export async function openCarte(menuId, { onClose } = {}) {
                    >${esc(x.nom)}${x.actif ? ' · appliquée' : ''}</option>`).join('')}
                </select>`
             : `<span class="mono-label" style="color:var(--mut3);">prix propres aux recettes</span>`}
+          <button class="btn" data-export>Exporter</button>
           <button class="btn" data-ajouter>+ Ajouter des recettes</button>
         </div>
       </div>
@@ -566,6 +568,16 @@ export async function openCarte(menuId, { onClose } = {}) {
     );
 
     zone.querySelector('[data-ajouter]').addEventListener('click', ajouterFiches);
+    zone.querySelector('[data-export]').addEventListener('click', () =>
+      exporter({
+        titre: menu.nom,
+        fichier: `carte-${menu.nom}`,
+        colonnes: ['Recette', 'Famille', 'Coût matière', 'Prix TTC', 'Marge %', 'Marge cible %'],
+        lignes: menu.cocktails.map((c) => [
+          c.nom, c.famille, c.cost, prixDe(c), margeDe(c), c.marge_cible,
+        ]),
+      })
+    );
   }
 
   function bindTarifs() {
