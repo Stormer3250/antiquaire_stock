@@ -40,6 +40,9 @@ Tout vit dans **`~/AntiquaireStock/`** :
 | `logs/` | journaux du service |
 
 - **Sauvegarde automatique** chaque nuit ; « Sauvegarder maintenant » dans Configuration.
+- **Avant chaque mise à jour du schéma**, la base est mise de côté toute seule
+  (`avant-migration-…`), et la migration est atomique : elle passe en entier ou pas du tout.
+  Les données saisies ne sont jamais touchées par `git pull`, elles vivent hors du dépôt.
 - **Restaurer** : Configuration → Sauvegardes → Restaurer. L'état courant est d'abord mis
   de côté (`avant-restauration-…`), donc l'opération est annulable.
 - Chaque instantané est une **base complète et autonome** : copiable sur une clé USB,

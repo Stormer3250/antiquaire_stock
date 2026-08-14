@@ -22,6 +22,70 @@ def test_migrate_is_idempotent(conn):
     assert v1 == v2
 
 
+def _base_v1(tmp_path):
+    """Une base au schéma d'origine, avec des migrations en retard."""
+    import shutil
+
+    staged = tmp_path / "migrations"
+    staged.mkdir()
+    shutil.copy(db.MIGRATIONS_DIR / "001_init.sql", staged)
+    c = db.connect(tmp_path / "stock.db")
+    db.migrate(c, staged)
+    return c, staged
+
+
+def test_une_migration_qui_echoue_ne_laisse_rien_derriere(tmp_path):
+    """Tout ou rien : un script qui casse au milieu ne doit pas laisser sa moitié faite.
+
+    Sans le BEGIN explicite, executescript auto-commite chaque instruction et la
+    table ci-dessous survivrait, avec user_version resté à 1 : base irréparable.
+    """
+    c, staged = _base_v1(tmp_path)
+    (staged / "002_cassee.sql").write_text(
+        "CREATE TABLE moitie_faite (x);\nSELECT colonne_qui_n_existe_pas;\n"
+    )
+
+    with pytest.raises(RuntimeError, match="002_cassee"):
+        db.migrate(c, staged)
+
+    tables = {r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert "moitie_faite" not in tables
+    assert c.execute("PRAGMA user_version").fetchone()[0] == 1
+    c.close()
+
+
+def test_en_attente_detecte_une_base_en_retard(tmp_path, conn):
+    c, _ = _base_v1(tmp_path)
+    assert db.en_attente(c) is True  # base v1 face aux migrations livrées
+    assert db.en_attente(conn) is False  # déjà à jour
+    c.close()
+
+
+def test_une_base_neuve_ne_declenche_pas_de_sauvegarde(tmp_path):
+    c = db.connect(tmp_path / "neuve.db")
+    assert db.en_attente(c) is False  # version 0 : rien à perdre
+    c.close()
+
+
+def test_la_base_est_sauvegardee_avant_migration(tmp_path):
+    """Mise à jour d'une base peuplée : un instantané d'avant existe et est complet."""
+    from antiquaire.main import create_app
+
+    c, _ = _base_v1(tmp_path)
+    c.execute("INSERT INTO cocktails (nom, created_at) VALUES ('Negroni', '2026-01-01')")
+    c.commit()
+    c.close()
+
+    create_app(db_path=tmp_path / "stock.db", with_scheduler=False)
+
+    avant = list((tmp_path / "backups").glob("avant-migration-*.db"))
+    assert len(avant) == 1
+    sauvegarde = db.connect(avant[0])
+    assert sauvegarde.execute("PRAGMA user_version").fetchone()[0] == 1  # l'état d'AVANT
+    assert sauvegarde.execute("SELECT nom FROM cocktails").fetchone()[0] == "Negroni"
+    sauvegarde.close()
+
+
 def test_foreign_keys_enforced(conn):
     with pytest.raises(sqlite3.IntegrityError):
         conn.execute(

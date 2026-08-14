@@ -20,6 +20,13 @@ def create_app(db_path: str | Path | None = None, with_scheduler: bool | None = 
         if with_scheduler is None:
             with_scheduler = True
     conn = db.connect(db_path)
+    if db.en_attente(conn):
+        # Une mise à jour va toucher au schéma : on met la base de côté d'abord. Les
+        # sauvegardes sont nocturnes, sans cela une mise à jour en plein service
+        # risquerait la journée écoulée.
+        from antiquaire import backups
+
+        backups.snapshot(Path(db_path), Path(db_path).parent / "backups", prefix="avant-migration")
     db.migrate(conn)  # échoue fort : pas de migration, pas de service
     conn.close()
 

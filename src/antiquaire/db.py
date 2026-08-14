@@ -24,6 +24,18 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     return conn
 
 
+def en_attente(conn: sqlite3.Connection, migrations_dir: Path = MIGRATIONS_DIR) -> bool:
+    """Vrai si une base DÉJÀ peuplée a des migrations en retard : le moment de la sauvegarder.
+
+    Une base neuve (version 0) répond faux : il n'y a rien à perdre, et on ne veut pas
+    d'instantané « avant-migration » vide à chaque première ouverture.
+    """
+    version = conn.execute("PRAGMA user_version").fetchone()[0]
+    if version == 0:
+        return False
+    return any(int(p.name.split("_")[0]) > version for p in migrations_dir.glob("[0-9]*.sql"))
+
+
 def migrate(conn: sqlite3.Connection, migrations_dir: Path = MIGRATIONS_DIR) -> int:
     """Applique les migrations au-dessus de user_version. Échoue fort, jamais à moitié."""
     version = conn.execute("PRAGMA user_version").fetchone()[0]
@@ -32,7 +44,11 @@ def migrate(conn: sqlite3.Connection, migrations_dir: Path = MIGRATIONS_DIR) -> 
         if number <= version:
             continue
         try:
-            conn.executescript(path.read_text())  # commits pending txn, runs script
+            # Le BEGIN explicite est ce qui rend la migration atomique : sans lui,
+            # executescript laisse chaque instruction auto-commitée et un échec au
+            # milieu du script laisse la base à moitié migrée, irréparable au
+            # redémarrage. Le numéro de version est écrit DANS la même transaction.
+            conn.executescript(f"BEGIN;\n{path.read_text()}")
             conn.execute(f"PRAGMA user_version = {number}")
             conn.commit()
         except sqlite3.Error as e:
